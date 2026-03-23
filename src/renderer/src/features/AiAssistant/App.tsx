@@ -3,6 +3,8 @@ import ChatPanel from "./components/ChatPanel";
 import HomePanel from "./components/HomePanel";
 import HistoryPanel from "./components/HistoryPanel";
 import SettingsPanel from "./components/SettingsPanel";
+import "./styles/global.css";
+import "./styles/variables.css";
 import "./styles/components/chat.css";
 import { ProjectProvider } from "./context/ProjectContext";
 import { ThemeProvider } from "./context/ThemeContext";

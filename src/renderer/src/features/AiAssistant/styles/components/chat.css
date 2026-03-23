@@ -1,184 +1,237 @@
+/* 
+  AI Assistant Modern Design System
+  Base: Gray-950 (Main App) + Blue-600 (Accents)
+*/
+
+:root {
+  /* Colors - Light Mode (Fallback) */
+  --ai-bg-primary: #ffffff;
+  --ai-bg-secondary: #f9fafb;
+  --ai-border-primary: #e5e7eb;
+  --ai-text-primary: #111827;
+  --ai-text-secondary: #6b7280;
+  --ai-accent: #2563eb;
+  --ai-accent-hover: #1d4ed8;
+  --ai-msg-user-bg: #eff6ff;
+  --ai-msg-ai-bg: transparent;
+  --ai-font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.dark {
+  /* Colors - Dark Mode (Main) */
+  --ai-bg-primary: #030712; /* gray-950 */
+  --ai-bg-secondary: #111827; /* gray-900 */
+  --ai-border-primary: #1f2937; /* gray-800 */
+  --ai-text-primary: #f3f4f6; /* gray-100 */
+  --ai-text-secondary: #9ca3af; /* gray-400 */
+  --ai-accent: #3b82f6; /* blue-500 for better visibility in dark */
+  --ai-accent-hover: #60a5fa;
+  --ai-msg-user-bg: #1f2937;
+  --ai-msg-ai-bg: transparent;
+}
+
+/* Base Panel Layout */
 .chat-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(
-    --secondary-bg
-  ); /* Đổi từ primary-bg sang secondary-bg để đồng nhất với header */
-  color: var(--primary-text);
-}
-
-/* Header Styles */
-.chat-header {
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--secondary-bg);
-}
-
-.chat-header-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.chat-avatar {
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chat-title h1 {
-  font-size: var(--font-size-xxl);
-  font-weight: 500;
-  color: var(--primary-text);
-  text-align: center;
-}
-
-/* Messages Area */
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-lg);
-}
-
-.recent-tasks-section {
-  margin-bottom: var(--spacing-xl);
-}
-
-.recent-tasks-header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  cursor: pointer;
-  user-select: none;
-}
-
-.recent-tasks-header:hover {
-  background-color: var(--hover-bg);
-  border-radius: var(--border-radius);
-}
-
-.expand-icon {
-  font-size: var(--font-size-sm);
-  color: var(--secondary-text);
-}
-
-.recent-tasks-title {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--secondary-text);
-  letter-spacing: 0.5px;
-}
-
-.recent-tasks-list {
-  margin-top: var(--spacing-md);
-}
-
-.task-item {
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  background-color: var(--secondary-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-lg);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.task-item:hover {
-  background-color: var(--hover-bg);
-  border-color: var(--accent-text);
-}
-
-.task-date {
-  font-size: var(--font-size-xs);
-  color: var(--secondary-text);
-  margin-bottom: var(--spacing-sm);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.task-content {
-  font-size: var(--font-size-md);
-  color: var(--primary-text);
-  line-height: 1.5;
-  margin-bottom: var(--spacing-sm);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  width: 100%;
+  background-color: var(--ai-bg-primary);
+  color: var(--ai-text-primary);
+  font-family: var(--ai-font-sans);
   overflow: hidden;
+  position: relative;
 }
 
-.task-tokens {
-  font-size: var(--font-size-xs);
-  color: var(--secondary-text);
-}
-
-.view-all-history {
-  text-align: center;
-  padding: var(--spacing-lg);
-}
-
-.view-all-btn {
-  background: none;
-  border: none;
-  color: var(--accent-text);
-  font-size: var(--font-size-md);
-  cursor: pointer;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: var(--border-radius);
-  transition: background-color 0.2s;
-}
-
-.view-all-btn:hover {
-  background-color: var(--hover-bg);
-}
-
-/* Input Area */
-.chat-input-container {
-  border-top: 1px solid var(--border-color);
-  background-color: var(--secondary-bg);
-}
-
-.auto-approve-bar {
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background-color: var(
-    --secondary-bg
-  ); /* Đổi từ tertiary-bg sang secondary-bg để đồng nhất */
-  border-bottom: 1px solid var(--border-color);
+/* Header */
+.chat-header {
+  flex-shrink: 0;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--ai-border-primary);
+  background-color: var(--ai-bg-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  z-index: 10;
 }
 
-.auto-approve-text {
-  font-size: var(--font-size-sm);
-  color: var(--secondary-text);
+/* Scrollable Body */
+.chat-messages {
+  flex-grow: 1;
+  height: 0; /* Flexible height trigger */
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background-color: var(--ai-bg-primary);
 }
 
-/* ChatInput component mới sử dụng inline styles, không cần CSS ở đây */
+/* Footer */
+#chat-footer-container {
+  flex-shrink: 0;
+  background-color: var(--ai-bg-primary);
+  border-top: 1px solid var(--ai-border-primary);
+  padding: 1rem;
+  z-index: 10;
+}
 
-/* Scrollbar Styles */
+/* Message Styles */
+.message-bubble {
+  max-width: 90%;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  line-height: 1.6;
+  font-size: 0.9375rem;
+}
+
+.message-user {
+  align-self: flex-end;
+  background-color: var(--ai-msg-user-bg);
+  color: var(--ai-text-primary);
+  border-bottom-right-radius: 0.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.message-ai {
+  align-self: flex-start;
+  background-color: var(--ai-msg-ai-bg);
+  color: var(--ai-text-primary);
+  max-width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Custom Scrollbar (from Zen) */
 .chat-messages::-webkit-scrollbar {
   width: 10px;
 }
 
 .chat-messages::-webkit-scrollbar-track {
-  background: var(
-    --secondary-bg
-  ); /* Đổi từ primary-bg sang secondary-bg để đồng nhất */
+  background: var(--secondary-bg);
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: var(--hover-bg); /* Đổi từ tertiary-bg sang hover-bg để phù hợp */
+  background: var(--hover-bg);
   border-radius: 5px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: var(
-    --accent-text
-  ); /* Sử dụng accent color khi hover để nổi bật */
+  background: var(--accent-color);
 }
+
+/* Message Code Blocks */
+.message-code-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.message-code-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.message-code-copy-btn {
+  background: transparent;
+  border: none;
+  color: var(--ai-text-secondary);
+  cursor: pointer;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: opacity 0.2s ease;
+}
+
+.message-code-copy-btn:hover {
+  opacity: 1;
+  color: var(--ai-accent);
+}
+
+.message-code-container {
+  padding-left: 29px;
+}
+
+/* Interleaved content layout */
+.timeline-item {
+  position: relative;
+  padding-bottom: 8px;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--ai-bg-secondary);
+  z-index: 1;
+}
+
+.timeline-item:not(.last)::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 18px;
+  bottom: -8px;
+  width: 2px;
+  background-color: var(--ai-border-primary); /* Changed from var(--ai-border) to var(--ai-border-primary) */
+}
+
+/* Markdown Content Polish */
+.markdown-content {
+  color: var(--ai-text-primary);
+  overflow-wrap: break-word;
+  line-height: 1.6;
+  font-size: 0.9375rem;
+}
+
+.markdown-content p {
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content code {
+  background-color: var(--ai-bg-secondary);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.375rem;
+  font-family: inherit;
+  font-size: 0.875em;
+}
+
+.markdown-content pre {
+  background-color: var(--ai-bg-secondary);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ai-border-primary);
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+/* Timeline/Assistant Indicators */
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--ai-accent);
+  position: absolute;
+  left: -20px;
+  top: 10px;
+}
+
+.assistant-message-container {
+  position: relative;
+  padding-left: 0;
+}
+
+/* Layout Utilities */
+.flex-1 { flex: 1; }
+.min-h-0 { min-height: 0; }

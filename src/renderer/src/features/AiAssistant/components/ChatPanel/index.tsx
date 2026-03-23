@@ -149,18 +149,19 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         actionIds,
         uiHidden,
         thinking,
-      ) =>
+      ) => {
         sendMessage(
           content,
           files,
-          model,
-          account,
+          model || currentModel,
+          account || currentAccount,
           skipLogic,
           actionIds,
           uiHidden,
-          thinking,
-          selectedQuickModel,
-        ),
+          thinking
+        );
+        setSelectedQuickModel(null);
+      },
     });
 
   // --- Refs ---
@@ -484,12 +485,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     <div
       className="chat-panel"
       style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        position: "relative",
-        backgroundColor: "var(--secondary-bg)",
-        color: "var(--vscode-editor-foreground)",
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
+        backgroundColor: 'var(--ai-bg-primary)',
+        color: 'var(--ai-text-primary)',
+        fontFamily: 'var(--ai-font-sans)',
       }}
     >
       <ChatHeader

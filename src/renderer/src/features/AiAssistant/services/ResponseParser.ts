@@ -59,7 +59,8 @@ export type ContentBlock =
       )[];
     }
   | { type: "tool"; action: ToolAction; actionIndex?: number }
-  | { type: "diagram"; nodes: any[]; edges: any[] };
+  | { type: "diagram"; nodes: any[]; edges: any[] }
+  | { type: "thinking"; content: string };
 
 /**
  * Decode common HTML entities back to their original characters

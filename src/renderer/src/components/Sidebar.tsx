@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { Info, ChevronDown, ChevronRight } from 'lucide-react';
+import { Info, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react';
 import { usePreferences } from '../contexts/PreferencesContext';
 import { getSidebarCategories } from '../config/sidebarCategories';
 
-export default function Sidebar() {
+interface SidebarProps {
+  onToggleAi?: () => void;
+  isAiOpen?: boolean;
+}
+
+export default function Sidebar({ onToggleAi, isAiOpen }: SidebarProps) {
   const [activeInfo, setActiveInfo] = useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<number, boolean>>({});
   const { t, language } = usePreferences();
@@ -97,6 +102,22 @@ export default function Sidebar() {
             </div>
           );
         })}
+      </div>
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/10 transition-colors">
+        <button
+          onClick={onToggleAi}
+          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all shadow-sm ${
+            isAiOpen 
+              ? 'bg-blue-600 text-white shadow-blue-500/20' 
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-700'
+          }`}
+        >
+          <MessageSquare size={18} className={isAiOpen ? 'text-white' : 'text-blue-500'} />
+          <span className="text-sm font-semibold">Zen Assistant</span>
+          {isAiOpen && (
+            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          )}
+        </button>
       </div>
     </aside>
   );
