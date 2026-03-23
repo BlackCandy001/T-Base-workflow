@@ -323,6 +323,7 @@ const ChatFooter: React.FC<ExtendedChatFooterProps> = ({
         width: "100%",
         backgroundColor: "var(--secondary-bg)",
         borderTop: "1px solid var(--border-color)",
+        flexShrink: 0,
       }}
     >
       {/* Hidden Inputs */}

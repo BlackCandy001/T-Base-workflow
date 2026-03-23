@@ -230,9 +230,9 @@ export default function WorkflowCanvas() {
   );
 
   return (
-    <div className="flex-1 h-full relative flex flex-col" ref={reactFlowWrapper}>
+    <div className="flex-1 h-full relative flex flex-col min-h-0 min-w-0" ref={reactFlowWrapper}>
       <WorkflowTabs />
-      <div className="flex-1 relative">
+      <div className="flex-1 relative overflow-hidden flex min-h-0 min-w-0">
         <ReactFlow
         nodes={nodes}
         edges={edges}

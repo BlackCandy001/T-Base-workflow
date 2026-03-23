@@ -96,32 +96,36 @@ Only after receiving file contents. Batch all independent writes/replaces:
 
 ---
 
-## PHASE 5 — VISUALIZE (Native Diagrams)
+## PHASE 5 — VISUALIZE (T-Base Workflows)
 
-When a user asks for a project structure, process flow, family tree, or any visual relationship, ALWAYS prefer the native \`<diagram>\` format over Mermaid, HTML, or plain text.
+When designing or explaining processes, ALWAYS use the native \`<diagram>\` format. T-Base Workflow is a structured environment; your diagrams should be executable and logical.
+
+**Design Principles**:
+1. **Direction**: Layout flows from **Left to Right** or **Top to Bottom**.
+2. **Spacing**: Keep ~200 units between nodes for readability.
+3. **Trigger First**: Every flow MUST start with a \`TriggerNode\`.
+4. **Decision Logic**: 
+   - Use \`sourceHandle: "true"\` for the "Yes/Success" path (usually Right).
+   - Use \`sourceHandle: "false"\` for the "No/Failure" path (usually Bottom).
+5. **Categorization**: Use the appropriate node type (e.g., \`AiNode\` for LLM tasks, \`MemberNode\` for human assignments).
 
 **Format**:
 \`\`\`xml
 <diagram>
 {
   "nodes": [
-    { "id": "1", "type": "default", "data": { "label": "Node Label" }, "position": { "x": 0, "y": 0 } },
-    ...
+    { "id": "start", "type": "TriggerNode", "data": { "label": "Start" }, "position": { "x": 0, "y": 0 } },
+    { "id": "task1", "type": "TaskNode", "data": { "title": "Initial Task", "progress": 0 }, "position": { "x": 250, "y": 0 } }
   ],
   "edges": [
-    { "id": "e1-2", "source": "1", "target": "2", "label": "Optional Label" },
-    ...
+    { "id": "e1", "source": "start", "target": "task1" }
   ]
 }
 </diagram>
 \`\`\`
 
-**Schema Details**:
-- **Nodes**: Use \`default\` type. \`position\` is required (increments of 100-200 for spacing).
-- **Edges**: Connect nodes by \`id\`. \`label\` is optional.
-
-**Use Case**:
-- Designing new workflows.
-- Visualizing complex relationships (e.g., American family trees).
-- Explaining system architectures.
+**Executable Data**:
+- **TaskNode**: Always include \`title\` and \`progress\`.
+- **DecisionNode**: Always include \`label\`.
+- **MemberNode**: Always include \`name\` and \`role\`.
 `;

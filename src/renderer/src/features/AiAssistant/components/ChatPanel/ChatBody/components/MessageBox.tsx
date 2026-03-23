@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, Check, Circle, Globe } from 'lucide-react'
 import * as marked from 'marked'
 import * as DOMPurify from 'dompurify'
 import { CodeBlock } from '../../../CodeBlock'
@@ -98,7 +98,6 @@ const MessageBoxCodeBlock: React.FC<{
                 e.stopPropagation()
                 navigator.clipboard.writeText(code)
               }}
-              className="message-code-copy-btn"
               title="Copy Code"
             >
               <div
@@ -174,11 +173,11 @@ const MessageBox: React.FC<MessageBoxProps> = ({
       <div className={`message-bubble message-user ${message.isCancelled ? 'is-cancelled' : ''}`}>
         <div style={{ position: 'relative' }}>
           {onRevert && (
-            <div className="revert-button" onClick={() => onRevert(message.id)} title="Revert conversation">
+            <div className="revert-button" onClick={() => onRevert(message.id)}>
               <RotateCcw size={14} />
             </div>
           )}
-          <div className="markdown-content">{truncatedContent}</div>
+          <div className="markdown-content" style={{ whiteSpace: 'pre-wrap' }}>{truncatedContent}</div>
           {isUserLongMessage && (
             <div onClick={() => setIsMessageCollapsed(!isMessageCollapsed)} className="show-more-toggle">
               {isMessageCollapsed ? 'Show more' : 'Show less'}
@@ -217,10 +216,10 @@ const MessageBox: React.FC<MessageBoxProps> = ({
                   {faviconUrl ? (
                     <img src={faviconUrl} alt="provider" onError={(e) => (e.currentTarget.style.display = 'none')} />
                   ) : (
-                    <span className="codicon codicon-server-process" />
+                    <Globe size={10} color="var(--secondary-text)" />
                   )}
                 </div>
-                <div className="metadata-text">Used {providerStr}{modelStr}{emailStr}</div>
+                <div className="metadata-text">Running with {providerStr}{modelStr}{emailStr}</div>
               </div>
             )
           }
@@ -235,7 +234,7 @@ const MessageBox: React.FC<MessageBoxProps> = ({
                     const html = (DOMPurify as any).sanitize ? (DOMPurify as any).sanitize(marked.parse(block.content)) : block.content
                     return (
                       <div key={key} className="message-bubble message-ai">
-                        <div className="timeline-dot ai-dot" style={{ backgroundColor: message.isError ? 'var(--error-foreground)' : 'var(--ai-accent)' }} />
+                        <div className={`timeline-dot ai-dot ${message.isError ? 'is-error' : ''}`} />
                         <div className="markdown-content-inline ai-content" dangerouslySetInnerHTML={{ __html: html }} />
                       </div>
                     )
@@ -313,16 +312,16 @@ const MessageBox: React.FC<MessageBoxProps> = ({
                   case 'task_progress':
                     return (
                       <div key={key} className="message-bubble message-task">
-                        <div className="timeline-dot task-dot" />
+                        <div className="timeline-dot task-dot" style={{ backgroundColor: 'var(--accent-color)' }} />
                         <div className="task-wrapper">
-                          <div className="task-header">
+                          <div className="task-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                             <span className="task-badge">{block.items.filter(i => i.completed).length}/{block.items.length}</span>
-                            <span className="task-title">{block.taskName || 'Task Progress'}</span>
+                            <span className="task-title" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--primary-text)', letterSpacing: '0.02em' }}>{block.taskName || 'Task Progress'}</span>
                           </div>
-                          <div className="task-items">
+                          <div className="task-items-container">
                             {block.items.map((item, i) => (
                               <div key={i} className={`task-item ${item.completed ? 'completed' : ''}`}>
-                                <span className={`codicon ${item.completed ? 'codicon-check' : 'codicon-circle-outline'}`} />
+                                {item.completed ? <Check size={14} color="#10b981" strokeWidth={3} /> : <Circle size={14} color="var(--secondary-text)" strokeWidth={3} />}
                                 <span>{item.text}</span>
                               </div>
                             ))}
@@ -385,7 +384,7 @@ const MessageBox: React.FC<MessageBoxProps> = ({
       )}
 
       {parsedContent.followupOptions && !parsedContent.contentBlocks.some(b => b.type === 'question') && (
-        <div className="followup-wrapper">
+        <div className="followup-wrapper" style={{ marginTop: '12px' }}>
           <FollowupOptions options={parsedContent.followupOptions} messageId={message.id} selectedOption={message.selectedOption} onOptionClick={(opt) => onSendMessage?.(opt)} />
         </div>
       )}

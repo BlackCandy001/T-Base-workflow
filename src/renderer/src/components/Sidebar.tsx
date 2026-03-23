@@ -25,7 +25,7 @@ export default function Sidebar({ onToggleAi, isAiOpen }: SidebarProps) {
   const categories = getSidebarCategories(t);
 
   return (
-    <aside className="w-68 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shadow-2xl z-10 relative transition-colors">
+    <aside className="w-68 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shadow-2xl z-10 relative transition-colors shrink-0">
       <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/20 transition-colors">
         <h1 className="text-lg font-black text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500 tracking-tight">T-Base React Flow</h1>
         <p className="text-xs text-gray-500 mt-1">Drag and drop unified nodes</p>

@@ -1,10 +1,9 @@
 import React from "react";
 import { TabInfo } from "../../types";
-
 import { Message } from "./ChatBody/types";
 import { useNetworkPing } from "../../hooks/useNetworkPing";
-
 import ProviderIcon from "../common/ProviderIcon";
+import { Copy, ChevronRight, Activity, Clock } from "lucide-react";
 
 interface ChatHeaderProps {
   selectedTab: TabInfo;
@@ -44,7 +43,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   taskProgress,
   onToggleTaskDrawer,
 }) => {
-  // Helper to format large numbers to K
   const formatTokens = (num: number) => {
     if (num >= 1000) {
       return (num / 1000).toFixed(1) + "K";
@@ -59,277 +57,202 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
     const id = conversationId || selectedTab.conversationId;
     if (id) {
       navigator.clipboard.writeText(id);
-      // Optional: Show a brief tooltip or toast if needed, but keeping it simple for now
     }
   };
 
-  const modelName = currentModel
-    ? currentModel.name || currentModel.id
-    : "DeepSeek Chat";
-  const providerId =
-    currentModel?.providerId || selectedTab.provider || "deepseek";
+  const providerId = currentModel?.providerId || selectedTab.provider || "deepseek";
 
   return (
     <div
       style={{
         borderBottom: "1px solid var(--border-color)",
-        backgroundColor: "var(--primary-bg)",
+        backgroundColor: "var(--secondary-bg)",
         display: "flex",
         flexDirection: "column",
+        flexShrink: 0,
+        padding: "10px 16px",
+        gap: "8px",
+        boxShadow: "var(--shadow-sm)",
+        zIndex: 10,
       }}
     >
+      {/* Top Row: Navigation & Meta info */}
       <div
         style={{
-          padding: "8px 12px",
           display: "flex",
-          flexDirection: "column",
-          gap: "4px",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
         }}
       >
-        {/* Row 1: Model Info, Conv ID & Token Usage */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            height: "22px",
-          }}
-        >
-          {/* Left: Model Info & Conv ID */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, overflow: "hidden" }}>
           <div
             style={{
+              padding: "4px",
+              borderRadius: "10px",
+              backgroundColor: "var(--accent-bg-transparent)",
               display: "flex",
               alignItems: "center",
-              gap: "6px",
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "var(--primary-text)",
-              overflow: "hidden",
+              justifyContent: "center",
             }}
           >
             <ProviderIcon 
               provider={{ provider_id: providerId, id: providerId, name: providerId }} 
-              size={14} 
+              size={16} 
             />
-            <span style={{ whiteSpace: "nowrap" }}>
-              {providerId}/{currentModel?.id || "chat"}
-            </span>
-
+          </div>
+          
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--primary-text)", whiteSpace: "nowrap" }}>
+                {currentModel?.id || "Chat"}
+              </span>
+              <span
+                onClick={handleCopyId}
+                title="Copy ID"
+                style={{
+                  fontSize: "10px",
+                  color: "var(--secondary-text)",
+                  fontFamily: "monospace",
+                  opacity: 0.6,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                  padding: "2px 6px",
+                  borderRadius: "6px",
+                  backgroundColor: "var(--tertiary-bg)",
+                  transition: "all var(--transition-fast)",
+                }}
+                className="interactive-element"
+              >
+                #{(conversationId || selectedTab.conversationId || "NEW").slice(-6)}
+                <Copy size={8} />
+              </span>
+            </div>
             {currentAccount?.email && (
               <span
                 style={{
-                  opacity: 0.7,
-                  fontStyle: "italic",
-                  fontWeight: "normal",
                   fontSize: "11px",
+                  color: "var(--secondary-text)",
+                  opacity: 0.7,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  maxWidth: "150px",
                 }}
                 title={currentAccount.email}
               >
-                &lt;{currentAccount.email}&gt;
+                {currentAccount.email}
               </span>
             )}
-
-            <span style={{ opacity: 0.3 }}>|</span>
-            <span
-              onClick={handleCopyId}
-              title="Click to copy Conversation ID"
-              style={{
-                fontSize: "10px",
-                color: "var(--secondary-text)",
-                fontFamily: "monospace",
-                opacity: 0.7,
-                cursor: "pointer",
-                backgroundColor: "var(--vscode-badge-background)",
-                padding: "1px 4px",
-                borderRadius: "2px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              #
-              {(conversationId || selectedTab.conversationId || "NEW").slice(
-                -5,
-              )}
-            </span>
-            <span
-              title="Network Ping"
-              style={{
-                fontSize: "10px",
-                color: "var(--secondary-text)",
-                fontFamily: "monospace",
-                opacity: 0.9,
-                fontWeight: "bold",
-                backgroundColor: "rgba(0,0,0,0.1)",
-                padding: "1px 5px",
-                borderRadius: "3px",
-                whiteSpace: "nowrap",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                border: `1px solid ${color}44`,
-              }}
-            >
-              <div
-                style={{
-                  width: "5px",
-                  height: "5px",
-                  borderRadius: "50%",
-                  backgroundColor: color,
-                  boxShadow: `0 0 4px ${color}`,
-                }}
-              />
-              {ping !== null ? `${ping}ms` : "OFFLINE"}
-            </span>
           </div>
+        </div>
 
-          {/* Right: Token Usage */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {/* Token Usage Bagde */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "8px",
+              gap: "4px",
+              padding: "4px 8px",
+              borderRadius: "8px",
+              backgroundColor: "var(--tertiary-bg)",
+              border: "1px solid var(--border-color)",
+              color: "var(--secondary-text)",
+              fontSize: "11px",
+              fontWeight: 600,
+            }}
+          >
+            <Activity size={12} strokeWidth={2.5} />
+            <span>{contextUsage ? formatTokens(contextUsage.total) : "0"}</span>
+          </div>
+
+          {/* Ping Indicator */}
+          <div
+            title={`Latency: ${ping !== null ? ping + 'ms' : 'Offline'}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "10px",
+              fontWeight: 700,
+              padding: "4px 8px",
+              borderRadius: "8px",
+              backgroundColor: "color-mix(in srgb, " + color + " 10%, transparent)",
+              color: color,
+              border: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
             }}
           >
             <div
               style={{
-                fontSize: "11px",
-                color: "var(--secondary-text)",
-                opacity: 0.8,
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: color,
+                boxShadow: `0 0 6px ${color}`,
               }}
-            >
-              {contextUsage ? formatTokens(contextUsage.total) : "0"}
-            </div>
+            />
+            {ping !== null ? `${ping}ms` : "OFFLINE"}
           </div>
         </div>
+      </div>
 
-        {/* Row 2: Task Name & Current Step */}
+      {/* Task & Progress Section */}
+      {(taskProgress?.current || taskName) && (
         <div
           onClick={onToggleTaskDrawer}
+          className="interactive-element"
           style={{
             display: "flex",
-            flexDirection: "column",
-            gap: "8px", // Increased gap from 4px to 8px
-            marginTop: "6px",
-            cursor: onToggleTaskDrawer ? "pointer" : "default",
+            alignItems: "center",
+            gap: "10px",
+            padding: "8px 12px",
+            borderRadius: "var(--radius-md)",
+            backgroundColor: "var(--tertiary-bg)",
+            border: "1px solid var(--border-color)",
+            cursor: "pointer",
+            transition: "all var(--transition-fast)",
           }}
         >
-          {taskProgress?.current ? (
-            <>
-              {/* Line 1: Task Index / Total & Name */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "12px",
-                  color: "var(--vscode-textLink-foreground)",
-                  fontWeight: 500,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    backgroundColor: "currentColor",
-                    flexShrink: 0,
-                  }}
-                />
-                <span
-                  style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {taskProgress.current.taskIndex &&
-                  taskProgress.current.totalTasks
-                    ? `Task ${taskProgress.current.taskIndex}/${taskProgress.current.totalTasks}: `
-                    : taskProgress.current.taskIndex
-                      ? `Task ${taskProgress.current.taskIndex}: `
-                      : ""}
-                  {taskProgress.current.taskName}
+          <div 
+            style={{ 
+              backgroundColor: "var(--accent-color)", 
+              width: "24px", 
+              height: "24px", 
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white"
+            }}
+          >
+            <Clock size={14} strokeWidth={2.5} />
+          </div>
+          
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--primary-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {taskProgress?.current?.taskName || taskName}
+              </span>
+              {taskProgress?.current?.totalTasks && (
+                <span style={{ fontSize: "10px", color: "var(--secondary-text)", backgroundColor: "var(--vscode-badge-background)", padding: "1px 6px", borderRadius: "10px" }}>
+                  {taskProgress.current.taskIndex || 1}/{taskProgress.current.totalTasks}
+                </span>
+              )}
+            </div>
+            
+            {taskProgress?.current?.tasks && (
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--secondary-text)", opacity: 0.8 }}>
+                <ChevronRight size={10} />
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {taskProgress.current.tasks.find(t => t.status === "todo")?.text || "Task completed"}
                 </span>
               </div>
-
-              {/* Line 2: Current Step */}
-              {(() => {
-                const currentTask = taskProgress.current.tasks.find(
-                  (t) =>
-                    (t as any).completed === false ||
-                    (t as any).status === "todo",
-                );
-                if (currentTask) {
-                  const stepIndex =
-                    taskProgress.current.tasks.indexOf(currentTask) + 1;
-                  const totalSteps = taskProgress.current.tasks.length;
-                  return (
-                    <span
-                      style={{
-                        fontSize: "10px",
-                        color: "var(--secondary-text)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        paddingLeft: "16px", // Slightly more padding
-                        opacity: 0.7,
-                      }}
-                    >
-                      → Step {stepIndex}/{totalSteps}: {currentTask.text}
-                    </span>
-                  );
-                }
-                return null;
-              })()}
-            </>
-          ) : taskName ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "12px",
-                color: "var(--vscode-textLink-foreground)",
-                fontWeight: 500,
-              }}
-            >
-              <div
-                style={{
-                  width: "6px",
-                  height: "6px",
-                  borderRadius: "50%",
-                  backgroundColor: "currentColor",
-                  flexShrink: 0,
-                }}
-              />
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {taskName}
-              </span>
-            </div>
-          ) : (
-            <span
-              style={{
-                opacity: 0.5,
-                fontStyle: "italic",
-                fontSize: "11px",
-                paddingLeft: "12px",
-              }}
-            >
-              No active task
-            </span>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

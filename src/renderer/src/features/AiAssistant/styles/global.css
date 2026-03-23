@@ -1,20 +1,98 @@
-html,
-body,
-#root {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
 .app-container {
   width: 100%;
-  height: 100vh;
-  max-height: 100vh;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  background-color: var(--primary-bg);
+  color: var(--primary-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Custom Scrollbar Utility */
+.zen-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.zen-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.zen-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-color) 50%, transparent);
+  border-radius: 10px;
+  transition: background var(--transition-fast);
+}
+
+.zen-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-text);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-color) 40%, transparent); }
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--transition-standard) forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.hover-glow {
+  transition: all var(--transition-standard);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.interactive-element {
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.interactive-element:hover {
+  background-color: var(--hover-bg);
+}
+
+.interactive-element:active {
+  transform: scale(0.98);
 }
 

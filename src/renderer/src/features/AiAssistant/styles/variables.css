@@ -1,52 +1,42 @@
 :root {
-  /* Sử dụng VS Code CSS variables với fallback values */
+  /* VS Code Colors */
   --primary-bg: var(--vscode-editor-background, #1e1e1e);
   --secondary-bg: var(--vscode-sideBar-background, #252526);
   --tertiary-bg: var(--vscode-panel-background, #2d2d30);
   --hover-bg: var(--vscode-list-hoverBackground, #2a2d2e);
-
   --primary-text: var(--vscode-foreground, #cccccc);
   --secondary-text: var(--vscode-descriptionForeground, #858585);
   --accent-text: var(--vscode-textLink-foreground, #4fc3f7);
-
   --border-color: var(--vscode-panel-border, #3e3e42);
   --input-bg: var(--vscode-input-background, #3c3c3c);
-  --input-bg-light: var(
-    --vscode-input-background,
-    #424242
-  ); /* Sáng hơn input-bg một chút */
-
   --accent-color: var(--vscode-textLink-foreground, #4fc3f7);
-  --accent-bg-transparent: color-mix(in srgb, var(--accent-color) 12%, transparent);
-
-  --button-primary: var(--vscode-button-background, #0e639c);
-  --button-primary-hover: var(--vscode-button-hoverBackground, #1177bb);
-  --button-secondary: var(
-    --vscode-button-secondaryBackground,
-    var(--vscode-sideBar-background, #2d2d30)
-  );
-  --button-secondary-hover: var(
-    --vscode-button-secondaryHoverBackground,
-    #3e3e42
-  );
-
-  --success-color: #4caf50;
-  --warning-color: #ff9800;
-  --error-color: #f44336;
-
+  
+  /* Redesigned Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
 
-  --border-radius: 4px;
-  --border-radius-lg: 8px;
+  /* Redesigned Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --border-radius: var(--radius-md);
 
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-md: 13px;
-  --font-size-lg: 14px;
-  --font-size-xl: 16px;
-  --font-size-xxl: 20px;
+  /* Shadows & Glows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --accent-glow: 0 0 15px color-mix(in srgb, var(--accent-color) 30%, transparent);
+
+  /* Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-standard: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Colors */
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --accent-bg-transparent: color-mix(in srgb, var(--accent-color) 12%, transparent);
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Zap, Search, History, Loader2, FolderOpen } from "lucide-react";
+import { Zap, Search, Clock, Loader2, FolderOpen, MessageSquare } from "lucide-react";
 import { ConversationItem } from "../HistoryPanel/types";
 import HistoryCard from "../HistoryPanel/HistoryCard";
 
@@ -30,14 +30,13 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
   useEffect(() => {
     const timer = setInterval(() => {
       setSloganIndex((prev) => (prev + 1) % SLOGANS.length);
-    }, 2000);
+    }, 4000);
     return () => clearInterval(timer);
   }, []);
 
   // Fetch history logic
   const fetchHistory = useCallback(() => {
     setIsLoading(true);
-    // Request history
     const vscodeApi = (window as any).vscodeApi;
     if (vscodeApi) {
       vscodeApi.postMessage({
@@ -46,10 +45,9 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
       });
     }
 
-    // Backup timeout if no response arrives
     setTimeout(() => {
       setIsLoading(false);
-    }, 5000); // 5s timeout
+    }, 5000);
   }, []);
 
   useEffect(() => {
@@ -88,10 +86,7 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
     };
 
     window.addEventListener("message", handleMessage);
-
-    // Initial load
     fetchHistory();
-
     return () => window.removeEventListener("message", handleMessage);
   }, [fetchHistory]);
 
@@ -131,19 +126,19 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
       ).getTime();
       return timeB - timeA;
     })
-    .slice(0, 10); // Show top 10 recent
+    .slice(0, 10);
 
   return (
     <div
+      className="zen-scrollbar animate-fade-in-up"
       style={{
         flex: 1,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "flex-start",
-        padding: "var(--spacing-xl) var(--spacing-md)",
+        padding: "var(--spacing-xl) var(--spacing-lg) var(--spacing-md) var(--spacing-lg)",
         color: "var(--primary-text)",
-        animation: "fadeIn 0.5s ease-out",
         maxWidth: "600px",
         margin: "0 auto",
         width: "100%",
@@ -156,7 +151,7 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "16px", // Reduced from 24px
+          gap: "16px",
           textAlign: "center",
           width: "100%",
         }}
@@ -167,17 +162,20 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
             display: "flex",
             alignItems: "center",
             gap: "16px",
+            marginBottom: "8px",
           }}
         >
           <div
+            className="hover-glow"
             style={{
               width: "48px",
               height: "48px",
-              borderRadius: "12px",
+              borderRadius: "14px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "var(--accent-color)", // Fallback color
+              backgroundColor: "var(--accent-color)",
+              boxShadow: "var(--accent-glow)",
             }}
           >
             {imagesUri ? (
@@ -185,17 +183,17 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
                 src={`${imagesUri}/icon.png`}
                 alt="Zen Logo"
                 style={{
-                  width: "100%",
-                  height: "100%",
+                  width: "28px",
+                  height: "28px",
                   objectFit: "contain",
                 }}
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
-                  e.currentTarget.parentElement!.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+                  e.currentTarget.parentElement!.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
                 }}
               />
             ) : (
-              <Zap size={24} color="white" />
+              <Zap size={24} color="white" fill="white" />
             )}
           </div>
 
@@ -204,11 +202,11 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
               fontSize: "36px",
               fontWeight: 800,
               margin: 0,
-              background:
-                "linear-gradient(to right, var(--primary-text), var(--secondary-text))",
+              background: "linear-gradient(135deg, var(--primary-text) 0%, var(--secondary-text) 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              letterSpacing: "-0.02em",
+              letterSpacing: "-0.03em",
+              lineHeight: 1,
             }}
           >
             Zen
@@ -216,88 +214,103 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
         </div>
 
         {/* Dynamic Slogan Section */}
-        <div
-          style={{
-            height: "40px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            margin: "0 0 8px 0", // Reduced from 16px
-          }}
-        >
+        <div style={{ height: "24px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "24px" }}>
           <div
             key={sloganIndex}
             style={{
-              fontSize: "18px",
+              fontSize: "15px",
               color: "var(--secondary-text)",
               fontWeight: 500,
-              animation: "slideUp 0.4s ease-out",
+              animation: "slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
               whiteSpace: "nowrap",
+              letterSpacing: "0.01em",
             }}
           >
             {SLOGANS[sloganIndex]}
           </div>
         </div>
 
-        {/* Elara Requirement Alert */}
+        {/* Get Started Card */}
         <div
+          className="hover-glow"
           style={{
-            padding: "12px 16px",
-            borderRadius: "12px",
-            backgroundColor: "rgba(234, 179, 8, 0.05)",
-            border: "1px solid rgba(234, 179, 8, 0.15)",
+            padding: "20px 24px",
+            borderRadius: "var(--radius-md)",
+            background: "linear-gradient(145deg, var(--secondary-bg) 0%, var(--tertiary-bg) 100%)",
+            border: "1px solid color-mix(in srgb, var(--accent-color) 20%, var(--border-color))",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
+            flexDirection: "column",
+            gap: "16px",
             textAlign: "left",
             width: "100%",
-            marginBottom: "24px",
+            marginBottom: "32px",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <Zap size={20} color="#eab308" style={{ flexShrink: 0 }} />
-            <div
-              style={{
-                fontSize: "12px",
-                color: "var(--primary-text)",
-                lineHeight: "1.4",
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+            <div 
+              style={{ 
+                padding: "10px", 
+                backgroundColor: "var(--accent-bg-transparent)", 
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                animation: "pulseGlow 2s infinite"
               }}
             >
-              <strong style={{ color: "#eab308" }}>Get Started:</strong> Connect
-              your AI accounts to start chatting with models.
+              <Zap size={22} color="var(--accent-color)" fill="var(--accent-color)" strokeWidth={1.5} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, margin: "0 0 4px 0", color: "var(--primary-text)" }}>
+                Get Started with Zen
+              </h3>
+              <p style={{ fontSize: "13px", color: "var(--secondary-text)", lineHeight: "1.5", margin: 0 }}>
+                Connect your AI accounts to unlock unlimited intelligence and start building with your favorite models.
+              </p>
             </div>
           </div>
+          
           <button
+            className="interactive-element"
             onClick={() => {
               window.postMessage({ command: "showAccountDrawer" }, "*");
             }}
             style={{
-              padding: "6px 12px",
-              backgroundColor: "var(--accent-color)",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "11px",
+              padding: "10px 20px",
+              backgroundColor: "transparent",
+              color: "var(--accent-color)",
+              border: "1.5px solid var(--accent-color)",
+              borderRadius: "10px",
+              fontSize: "13px",
               fontWeight: 600,
               cursor: "pointer",
-              whiteSpace: "nowrap",
+              textAlign: "center",
+              transition: "all var(--transition-fast)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--accent-color)";
+              e.currentTarget.style.color = "white";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--accent-color)";
             }}
           >
-            Connect Account
+            Connect All Accounts
           </button>
         </div>
       </div>
 
-      {/* History Section */}
+      {/* Recent Conversations Section */}
       <div
-        className="welcome-history-section"
         style={{
           width: "100%",
           display: "flex",
           flexDirection: "column",
-          gap: "12px",
+          gap: "16px",
+          marginTop: "8px",
         }}
       >
         <div
@@ -314,22 +327,29 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
               alignItems: "center",
               gap: "8px",
               color: "var(--secondary-text)",
+              fontSize: "12px",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
             }}
           >
-            <History size={14} />
-            <span
-              style={{
-                fontSize: "11px",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-              }}
-            >
-              Recent Conversations
-            </span>
+            <Clock size={14} strokeWidth={2} />
+            <span>Recent Conversations</span>
           </div>
 
+          {/* Search History */}
           <div style={{ position: "relative", width: "180px" }}>
+            <Search
+              size={14}
+              style={{
+                position: "absolute",
+                left: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--secondary-text)",
+                pointerEvents: "none",
+              }}
+            />
             <input
               type="text"
               placeholder="Search history..."
@@ -337,23 +357,22 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: "100%",
-                padding: "4px 8px 4px 28px",
-                fontSize: "11px",
-                backgroundColor: "var(--input-bg)",
+                padding: "6px 12px 6px 30px",
+                fontSize: "12px",
+                backgroundColor: "var(--tertiary-bg)",
                 border: "1px solid var(--border-color)",
-                borderRadius: "6px",
+                borderRadius: "10px",
                 color: "var(--primary-text)",
                 outline: "none",
+                transition: "all var(--transition-fast)",
               }}
-            />
-            <Search
-              size={12}
-              style={{
-                position: "absolute",
-                left: "8px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "var(--secondary-text)",
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "var(--accent-color)";
+                e.currentTarget.style.boxShadow = "var(--accent-glow)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "var(--border-color)";
+                e.currentTarget.style.boxShadow = "none";
               }}
             />
           </div>
@@ -365,22 +384,12 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
             display: "flex",
             flexDirection: "column",
             gap: "8px",
-            maxHeight: "350px",
+            maxHeight: "400px",
             overflowY: "auto",
-            paddingRight: "0",
           }}
         >
           {isLoading ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "40px",
-                color: "var(--secondary-text)",
-                gap: "8px",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px", color: "var(--secondary-text)", gap: "8px" }}>
               <Loader2 size={16} className="spin-animation" />
               <span style={{ fontSize: "12px" }}>Loading history...</span>
             </div>
@@ -400,48 +409,50 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
             ))
           ) : (
             <div
+              className="animate-fade-in-up"
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "32px 16px",
+                padding: "48px 24px",
                 backgroundColor: "var(--secondary-bg)",
                 border: "1px dashed var(--border-color)",
-                borderRadius: "8px",
+                borderRadius: "var(--radius-md)",
                 color: "var(--secondary-text)",
-                fontSize: "13px",
                 textAlign: "center",
-                gap: "8px",
-                marginTop: "8px",
+                gap: "16px",
               }}
             >
-              {searchQuery ? (
-                <>
-                  <Search size={24} style={{ opacity: 0.5 }} />
-                  <span>No matches found for "{searchQuery}"</span>
-                </>
-              ) : (
-                <>
-                  <FolderOpen size={24} style={{ opacity: 0.5 }} />
-                  <span>No recent conversations found.</span>
-                  <span style={{ fontSize: "12px", opacity: 0.8 }}>Your new chats will appear here.</span>
-                </>
-              )}
+              <div 
+                className="animate-float"
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "14px",
+                  backgroundColor: "color-mix(in srgb, var(--secondary-text) 10%, transparent)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--secondary-text)",
+                }}
+              >
+                <MessageSquare size={24} strokeWidth={1.5} />
+              </div>
+              <div>
+                <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--primary-text)", marginBottom: "4px" }}>
+                  {searchQuery ? "No matches found" : "No conversations found"}
+                </div>
+                <div style={{ fontSize: "12px", opacity: 0.7 }}>
+                  {searchQuery ? `We couldn't find anything matching "${searchQuery}"` : "Your new chats will appear here. Start a conversation below!"}
+                </div>
+              </div>
             </div>
           )}
         </div>
       </div>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
         .spin-animation {
           animation: spin 1s linear infinite;
         }
@@ -449,7 +460,6 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        /* Custom Scrollbar for history list - Hidden but scrollable */
         .welcome-history-section-list::-webkit-scrollbar {
           display: none;
         }

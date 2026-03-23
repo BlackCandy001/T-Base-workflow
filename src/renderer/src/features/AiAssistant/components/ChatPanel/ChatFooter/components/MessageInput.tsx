@@ -3,23 +3,23 @@ import { UploadedFile } from "../types";
 import ChangesTree from "../../ChangesTree";
 import { PlusIcon, ChevronDownIcon, SendIcon } from "./Icons";
 import {
-  Check,
   Cpu,
-  Search,
   X,
   Clock,
-  Ban,
   FileText,
   Wrench,
   Brain,
   Zap,
-  User,
+  Layout,
 } from "lucide-react";
 import { useBackendConnection } from "../../../../context/BackendConnectionContext";
 import { LANGUAGES } from "../../../SettingsPanel/LanguageSelector";
 import { useSettings, Account } from "../../../../context/SettingsContext";
+import { useProject } from "../../../../context/ProjectContext";
+import { parseAIResponse } from "../../../../services/ResponseParser";
 import QuickSwitchDrawer from "./QuickSwitchDrawer";
 import ToolSettingsDrawer from "./ToolSettingsDrawer";
+import ContextualActionPanel from "./ContextualActionPanel";
 
 interface MessageInputProps {
   message: string;
@@ -86,7 +86,6 @@ interface MessageInputProps {
 
 const MessageInput: React.FC<MessageInputProps> = ({
   message,
-  setMessage,
   isHistoryMode = false,
   uploadedFiles,
   textareaRef,
@@ -95,9 +94,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   handlePaste,
   handleDragOver,
   handleDrop,
-  setShowAtMenu,
   handleFileSelect,
-  onOpenProjectStructure,
   showChangesDropdown,
   setShowChangesDropdown,
   messages,
@@ -117,13 +114,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
   isStreaming,
   onStopGeneration,
   onToggleBackupDrawer,
-  hasBackupEvents,
   backupEventCount,
-  onToggleBlacklistDrawer,
-  isBackupEnabled,
   isRawMode,
   onToggleRawMode,
-  onToggleAccountDrawer,
   hasResolvedModel,
 }) => {
   const { isConnected, isElaraMismatch } = useBackendConnection();
@@ -194,19 +187,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const formatWorkspacePath = (path: string) => {
-    if (!path) return "";
-    const parts = path.split(/[/\\]/).filter(Boolean);
-    if (parts.length <= 5) return path;
-    const lastFive = parts.slice(-5).join("/");
-    return `../${lastFive}`;
-  };
-
-  // ... (rest of the file until rendering)
-
-  // NOTE: Logic to hide dropdowns is applied in the render method below
-  // We need to look further down for the return statement to modify the render.
-  // Since replace_file_content handles contiguous blocks, I will target the props definition first.
 
   // Load API URL
   React.useEffect(() => {
@@ -307,13 +287,51 @@ const MessageInput: React.FC<MessageInputProps> = ({
     currentAccount,
     setCurrentAccount,
   ]);
+  
+  const { setNodes, setEdges } = useProject();
+  const [appliedLatest, setAppliedLatest] = React.useState(false);
+  const [dismissedDiagramId, setDismissedDiagramId] = React.useState<string | null>(null);
+
+  // Find latest diagram in history
+  const latestDiagram = React.useMemo(() => {
+    if (!messages || messages.length === 0) return null;
+    
+    // Scan messages from newest to oldest
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.role === "assistant" && msg.content) {
+        const parsed = parseAIResponse(msg.content);
+        if (parsed.diagrams && parsed.diagrams.length > 0) {
+          const diagram = parsed.diagrams[parsed.diagrams.length - 1];
+          // Use a hash or ID to identify the diagram. 
+          // Since diagram object might not have unique ID, we can use message ID or index.
+          const diagramId = `diag-${i}`; 
+          if (dismissedDiagramId === diagramId) return null;
+          return { ...diagram, id: diagramId };
+        }
+      }
+    }
+    return null;
+  }, [messages, dismissedDiagramId]);
+
+  const handleApplyToCanvas = () => {
+    if (latestDiagram) {
+      setNodes(latestDiagram.nodes);
+      setEdges(latestDiagram.edges);
+      setAppliedLatest(true);
+      setTimeout(() => setAppliedLatest(false), 3000);
+    }
+  };
 
   return (
     <div
       style={{
         padding: "var(--spacing-md) var(--spacing-lg)",
-        backgroundColor: "var(--secondary-bg)",
+        paddingBottom: "var(--spacing-lg)",
+        backgroundColor: "var(--primary-bg)",
         position: "relative",
+        borderTop: "1px solid var(--border-color)",
+        zIndex: 10,
       }}
     >
       {showChangesDropdown && (
@@ -330,213 +348,122 @@ const MessageInput: React.FC<MessageInputProps> = ({
       />
 
       <div
+        className="animate-fade-in-up"
         style={{
           display: "flex",
           flexDirection: "column",
           position: "relative",
-          borderRadius: "var(--border-radius)",
-          border: !isConnected ? "1px solid #f44336" : "1px solid transparent",
-          transition: "border 0.3s ease",
-          marginTop: "24px", // Space for badges sticking up
+          borderRadius: "var(--radius-lg)",
+          backgroundColor: "var(--secondary-bg)",
+          border: !isConnected ? "1.5px solid var(--error-color)" : "1px solid var(--border-color)",
+          boxShadow: "var(--shadow-md)",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          marginTop: "24px",
+          padding: "2px",
+          overflow: "hidden",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = "var(--shadow-lg)";
+          e.currentTarget.style.borderColor = "var(--accent-color)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = "var(--shadow-md)";
+          e.currentTarget.style.borderColor = isConnected ? "var(--border-color)" : "var(--error-color)";
         }}
       >
-        {/* 🆕 QUICK SWITCH BADGE (Stuck to Border) */}
-        {selectedQuickModel && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "100%",
-              left: "8px",
-              backgroundColor: "var(--accent-bg-transparent)",
-              color: "var(--accent-color)",
-              padding: "4px 8px",
-              fontSize: "11px",
-              fontWeight: 600,
-              borderTopLeftRadius: "var(--border-radius)",
-              borderTopRightRadius: "var(--border-radius)",
-              borderBottomLeftRadius: "0",
-              borderBottomRightRadius: "0",
-              border: "1px solid var(--accent-color)",
-              borderBottom: "none",
-              zIndex: 20,
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
-              marginBottom: "-1px", // Overlap the border
-            }}
-            title="Quick Switch Model is Active"
-          >
-            {selectedQuickModel.favicon ? (
-              <img
-                src={selectedQuickModel.favicon}
-                alt="favicon"
-                style={{
-                  width: "12px",
-                  height: "12px",
-                  borderRadius: "2px",
-                }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : (
-              <span
-                className="codicon codicon-server-process"
-                style={{ fontSize: "12px" }}
-              />
-            )}
-
-            <span
-              style={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: "150px",
-              }}
-            >
-              {selectedQuickModel.providerId}/{selectedQuickModel.modelId}
-            </span>
-
-            {selectedQuickModel.email && (
-              <span
-                style={{
-                  opacity: 0.7,
-                  fontStyle: "italic",
-                  fontWeight: "normal",
-                  marginLeft: "2px",
-                  maxWidth: "120px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {selectedQuickModel.email}
-              </span>
-            )}
-
+        <ContextualActionPanel
+          isVisible={!!latestDiagram}
+          onApply={handleApplyToCanvas}
+          onDismiss={() => {
+            if (latestDiagram?.id) {
+              setDismissedDiagramId(latestDiagram.id);
+            }
+          }}
+          applied={appliedLatest}
+          nodeCount={latestDiagram?.nodes?.length || 0}
+          edgeCount={latestDiagram?.edges?.length || 0}
+        />
+        {/* Badges Block */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", position: "absolute", bottom: "100%", left: "12px", marginBottom: "-1px", zIndex: 20 }}>
+          {selectedQuickModel && (
             <div
+              className="hover-glow"
               style={{
-                cursor: "pointer",
+                backgroundColor: "var(--accent-bg-transparent)",
+                color: "var(--accent-color)",
+                padding: "6px 12px",
+                fontSize: "11px",
+                fontWeight: 700,
+                borderTopLeftRadius: "var(--radius-md)",
+                borderTopRightRadius: "var(--radius-md)",
+                border: "1px solid var(--accent-color)",
+                borderBottom: "none",
                 display: "flex",
                 alignItems: "center",
-                marginLeft: "4px",
-                opacity: 0.7,
+                gap: "8px",
+                boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
+                backdropFilter: "blur(8px)",
               }}
-              onClick={() => onQuickModelSelect?.(null)}
             >
-              <X size={12} strokeWidth={2.5} />
+              {selectedQuickModel.favicon ? (
+                <img src={selectedQuickModel.favicon} alt="icon" style={{ width: "12px", height: "12px", borderRadius: "2px" }} 
+                     onError={(e) => (e.currentTarget.style.display = "none")} />
+              ) : (
+                <Cpu size={12} strokeWidth={2.5} />
+              )}
+              <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {selectedQuickModel.providerId}/{selectedQuickModel.modelId}
+              </span>
+              <X size={14} style={{ cursor: "pointer", opacity: 0.7 }} onClick={(e) => { e.stopPropagation(); onQuickModelSelect?.(null); }} />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 🆕 HOME PANEL BADGE (Stuck to Border) - Only when !isConversationStarted */}
-        {(!isConversationStarted || currentModel) && (
-          <div
-            onClick={() => setIsQuickModelDropdownOpen(true)}
-            style={{
-              position: "absolute",
-              bottom: "100%",
-              left: "8px",
-              backgroundColor: "var(--input-bg)",
-              color: "var(--primary-text)",
-              padding: "5px 10px",
-              fontSize: "11px",
-              fontWeight: 600,
-              borderTopLeftRadius: "8px",
-              borderTopRightRadius: "8px",
-              borderBottomLeftRadius: "0",
-              borderBottomRightRadius: "0",
-              border: "1px solid var(--border-color)",
-              borderBottom: "none",
-              zIndex: 20,
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-              boxShadow: "0 -2px 6px rgba(0,0,0,0.1)",
-              transition: "all 0.2s ease",
-              marginBottom: "-1px", // Overlap the border
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--hover-bg)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--input-bg)";
-            }}
-            title="Click to select Model and Account"
-          >
-            {currentModel ? (
-              <>
-                {currentModel.favicon ? (
-                  <img
-                    src={currentModel.favicon}
-                    alt="favicon"
-                    style={{
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "2px",
-                    }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <span
-                    className="codicon codicon-server-process"
-                    style={{ fontSize: "12px" }}
-                  />
-                )}
-                {currentModel.providerId}/{currentModel.id}
-                {currentAccount?.email && (
-                  <span
-                    style={{
-                      opacity: 0.8,
-                      fontStyle: "italic",
-                      marginLeft: "2px",
-                    }}
-                  >
-                    {currentAccount.email}
-                  </span>
-                )}
-                <ChevronDownIcon size={12} />
-              </>
-            ) : (
-              <>
-                <span
-                  className="codicon codicon-server-process"
-                  style={{ fontSize: "12px" }}
-                />
-                Select Model
-                <ChevronDownIcon size={12} />
-              </>
-            )}
-          </div>
-        )}
-        <div
-          style={{
-            position: "relative",
-            backgroundColor: "var(--input-bg)",
-            borderTopLeftRadius: "var(--border-radius)",
-            borderTopRightRadius: "var(--border-radius)",
-            padding: "12px",
-          }}
-        >
-          <style>{`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: var(--scrollbar-thumb);
-            border-radius: 10px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background-color: var(--scrollbar-thumb-hover);
-          }
-        `}</style>
+          {(!isConversationStarted || currentModel) && (
+            <div
+              className="hover-glow"
+              onClick={() => setIsQuickModelDropdownOpen(true)}
+              style={{
+                backgroundColor: "var(--secondary-bg)",
+                color: "var(--primary-text)",
+                padding: "6px 12px",
+                fontSize: "11px",
+                fontWeight: 700,
+                borderTopLeftRadius: "var(--radius-md)",
+                borderTopRightRadius: "var(--radius-md)",
+                border: "1px solid var(--border-color)",
+                borderBottom: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              {currentModel ? (
+                <>
+                  {currentModel.favicon ? (
+                    <img src={currentModel.favicon} alt="icon" style={{ width: "12px", height: "12px", borderRadius: "2px" }}
+                         onError={(e) => (e.currentTarget.style.display = "none")} />
+                  ) : (
+                    <Cpu size={12} />
+                  )}
+                  <span>{currentModel.providerId}/{currentModel.id}</span>
+                  <span style={{ opacity: 0.6, display: 'flex' }}><ChevronDownIcon size={12} /></span>
+                </>
+              ) : (
+                <>
+                  <Cpu size={12} />
+                  <span>Select Brain</span>
+                  <span style={{ opacity: 0.6, display: 'flex' }}><ChevronDownIcon size={12} /></span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
+        {/* Input Area */}
+        <div style={{ position: "relative", padding: "12px 16px 8px 16px", backgroundColor: "transparent" }}>
           <textarea
             ref={textareaRef}
             value={message}
@@ -557,7 +484,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
             onPaste={(e) => {
               if (!supportsUpload && e.clipboardData.files.length > 0) {
                 e.preventDefault();
-                // Optional: Show toast "Upload not supported by this provider"
                 return;
               }
               handlePaste(e);
@@ -570,542 +496,243 @@ const MessageInput: React.FC<MessageInputProps> = ({
               }
               handleDrop(e);
             }}
-            onFocus={(e) => {
-              e.target.style.border = "none";
-              e.target.style.boxShadow = "none";
-            }}
             placeholder={
-              isHistoryMode
-                ? "History mode - sending messages is disabled"
-                : !isConnected
-                  ? "Đang lỗi kết nối với backend..."
-                  : isLoadingCache
-                    ? "Đang tải dữ liệu từ cache..."
-                    : isProcessing
-                      ? "Assistant is thinking..."
-                      : "Type @ to mention files, folders, or rules..."
+              isHistoryMode ? "History mode - sending messages is disabled" :
+              !isConnected ? "Backend connection lost..." :
+              isLoadingCache ? "Wait, loading brain data..." :
+              isProcessing ? "Assistant is crafting a response..." :
+              "Ask Zen anything or type @ to mention files..."
             }
-            disabled={
-              isHistoryMode || !isConnected || isLoadingCache || isProcessing
-            }
+            disabled={isHistoryMode || !isConnected || isLoadingCache || isProcessing}
             rows={1}
             style={{
               width: "100%",
-              minHeight: "24px",
+              minHeight: "28px",
               maxHeight: "240px",
               border: "none",
               outline: "none",
               resize: "none",
               fontFamily: "inherit",
-              fontSize: "var(--font-size-sm)",
+              fontSize: "14px",
+              lineHeight: "1.5",
               backgroundColor: "transparent",
               color: "var(--primary-text)",
               overflow: "auto",
-              opacity:
-                isHistoryMode || !isConnected || isLoadingCache || isProcessing
-                  ? 0.6
-                  : 1,
-              cursor:
-                isHistoryMode || !isConnected || isLoadingCache || isProcessing
-                  ? "not-allowed"
-                  : "text",
+              opacity: isHistoryMode || !isConnected || isLoadingCache || isProcessing ? 0.5 : 1,
+              cursor: isHistoryMode || !isConnected || isLoadingCache || isProcessing ? "not-allowed" : "text",
+              padding: "2px 0",
             }}
           />
         </div>
 
-        {/* Bottom Part: Toolbar */}
+        {/* Toolbar */}
         <div
           style={{
-            backgroundColor: "var(--input-bg)",
-            borderBottomLeftRadius: "var(--border-radius)",
-            borderBottomRightRadius: "var(--border-radius)",
-            padding: "8px 12px",
+            padding: "8px 12px 10px 12px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.02)",
+            borderBottomLeftRadius: "var(--radius-lg)",
+            borderBottomRightRadius: "var(--radius-lg)",
           }}
         >
-          {/* Left Icons */}
-          <div style={{ display: "flex", gap: "var(--spacing-xs)" }}>
+          {/* Left Toolbar Items */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             {supportsUpload && (
-              <div
-                style={{
-                  cursor: "pointer",
-                  padding: "var(--spacing-xs)",
-                  borderRadius: "var(--border-radius)",
-                  transition: "background-color 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--secondary-text)",
-                }}
+              <button
+                className="interactive-element"
                 onClick={handleFileSelect}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = "var(--hover-bg)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = "transparent")
-                }
                 title="Attach files"
+                style={{ padding: "6px", borderRadius: "var(--radius-sm)", color: "var(--secondary-text)"}}
               >
                 <PlusIcon />
-              </div>
+              </button>
             )}
 
-            {/* Task Progress Toggle */}
-            {isConversationStarted && hasTaskProgress && (
-              <div
-                style={{
-                  cursor: "pointer",
-                  padding: "var(--spacing-xs)",
-                  borderRadius: "var(--border-radius)",
-                  transition: "background-color 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--secondary-text)",
-                }}
-                onClick={onToggleTaskDrawer}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = "var(--hover-bg)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = "transparent")
-                }
-                title="Task Progress"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M13 5h8" />
-                  <path d="M13 12h8" />
-                  <path d="M13 19h8" />
-                  <path d="m3 17 2 2 4-4" />
-                  <rect x="3" y="4" width="6" height="6" rx="1" />
-                </svg>
-              </div>
-            )}
+            <div style={{ width: "1px", height: "16px", backgroundColor: "var(--border-color)", margin: "0 4px", opacity: 0.5 }} />
 
-            {/* Backup History Toggle */}
-            {isConversationStarted && onToggleBackupDrawer && (
-              <div
-                style={{
-                  cursor: "pointer",
-                  padding: "var(--spacing-xs)",
-                  borderRadius: "var(--border-radius)",
-                  transition: "background-color 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--secondary-text)",
-                  position: "relative",
-                }}
-                onClick={onToggleBackupDrawer}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = "var(--hover-bg)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = "transparent")
-                }
-                title="Code Backup History"
-              >
-                <Clock size={16} />
-                {backupEventCount !== undefined && backupEventCount > 0 && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: -4,
-                      right: -4,
-                      minWidth: 14,
-                      height: 14,
-                      borderRadius: "7px",
-                      backgroundColor: "rgba(0, 122, 204, 0.1)", // hardcoded badgeBG / 10
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "9px",
-                      fontWeight: 600,
-                      color: "#007acc", // hardcoded textColor
-                      padding: "0 4px",
-                    }}
+            {isConversationStarted && (
+              <>
+                {hasTaskProgress && (
+                  <button
+                    className="interactive-element"
+                    onClick={onToggleTaskDrawer}
+                    title="Task Progress"
+                    style={{ padding: "6px", borderRadius: "var(--radius-sm)", color: "var(--secondary-text)"}}
                   >
-                    {backupEventCount}
-                  </div>
+                    <Layout size={16} strokeWidth={2} />
+                  </button>
                 )}
-              </div>
+                {onToggleBackupDrawer && (
+                  <button
+                    className="interactive-element"
+                    onClick={onToggleBackupDrawer}
+                    title="Backup History"
+                    style={{ padding: "6px", borderRadius: "var(--radius-sm)", color: "var(--secondary-text)", position: "relative"}}
+                  >
+                    <Clock size={16} />
+                    {backupEventCount !== undefined && backupEventCount > 0 && (
+                      <span style={{ position: "absolute", top: "2px", right: "2px", width: "8px", height: "8px", backgroundColor: "var(--accent-color)", borderRadius: "50%", border: "1.5px solid var(--secondary-bg)" }} />
+                    )}
+                  </button>
+                )}
+              </>
             )}
 
-            {/* 🆕 Backup Blacklist Toggle */}
-            {onToggleBlacklistDrawer && isBackupEnabled && (
-              <div
-                style={{
-                  cursor: "pointer",
-                  padding: "var(--spacing-xs)",
-                  borderRadius: "var(--border-radius)",
-                  transition: "background-color 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--secondary-text)",
-                }}
-                onClick={onToggleBlacklistDrawer}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = "var(--hover-bg)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = "transparent")
-                }
-                title="Backup Blacklist"
-              >
-                <Ban size={16} />
-              </div>
-            )}
-
-            {/* Raw Mode Toggle */}
-            <div
-              style={{
-                cursor: "pointer",
-                padding: "var(--spacing-xs)",
-                borderRadius: "var(--border-radius)",
-                transition: "background-color 0.2s",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: isRawMode
-                  ? "var(--accent-color)"
-                  : "var(--secondary-text)",
-                backgroundColor: isRawMode
-                  ? "var(--accent-bg-transparent)"
-                  : "transparent",
-              }}
+            <button
+              className="interactive-element"
               onClick={onToggleRawMode}
-              onMouseEnter={(e) => {
-                if (!isRawMode)
-                  e.currentTarget.style.backgroundColor = "var(--hover-bg)";
-              }}
-              onMouseLeave={(e) => {
-                if (!isRawMode)
-                  e.currentTarget.style.backgroundColor = "transparent";
-              }}
-              title={isRawMode ? "Processed Mode" : "Raw Mode"}
+              title={isRawMode ? "Switch to Processed Mode" : "Switch to Raw Mode"}
+              style={{ padding: "6px", borderRadius: "var(--radius-sm)", color: isRawMode ? "var(--accent-color)" : "var(--secondary-text)"}}
             >
               <FileText size={16} />
-            </div>
+            </button>
 
-            {/* 🆕 Tool Settings Toggle */}
-            <div
-              style={{
-                cursor: "pointer",
-                padding: "var(--spacing-xs)",
-                borderRadius: "var(--border-radius)",
-                transition: "background-color 0.2s",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: isToolSettingsOpen
-                  ? "var(--accent-color)"
-                  : "var(--secondary-text)",
-                backgroundColor: isToolSettingsOpen
-                  ? "var(--accent-bg-transparent)"
-                  : "transparent",
-              }}
+            <button
+              className="interactive-element"
               onClick={() => setIsToolSettingsOpen(!isToolSettingsOpen)}
-              onMouseEnter={(e) => {
-                if (!isToolSettingsOpen)
-                  e.currentTarget.style.backgroundColor = "var(--hover-bg)";
-              }}
-              onMouseLeave={(e) => {
-                if (!isToolSettingsOpen)
-                  e.currentTarget.style.backgroundColor = "transparent";
-              }}
               title="Tool Settings"
+              style={{ padding: "6px", borderRadius: "var(--radius-sm)", color: isToolSettingsOpen ? "var(--accent-color)" : "var(--secondary-text)"}}
             >
               <Wrench size={16} />
-            </div>
+            </button>
 
-            {/* 🆕 Account Toggle */}
-              <div
-                style={{
-                  cursor: "pointer",
-                  padding: "var(--spacing-xs)",
-                  borderRadius: "var(--border-radius)",
-                  transition: "background-color 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--secondary-text)",
-                }}
-                onClick={() => window.postMessage({ command: "showAccountDrawer" }, "*")}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = "var(--hover-bg)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = "transparent")
-                }
-                title="Manage Accounts"
-              >
-                <User size={16} />
-              </div>
-
-            {/* Thinking Mode Toggle */}
             {supportsThinking && (
-              <div
-                style={{
-                  cursor: "pointer",
-                  padding: "var(--spacing-xs)",
-                  borderRadius: "var(--border-radius)",
-                  transition: "background-color 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: thinkingEnabled
-                    ? "var(--accent-color)"
-                    : "var(--secondary-text)",
-                  backgroundColor: thinkingEnabled
-                    ? "var(--accent-bg-transparent)"
-                    : "transparent",
-                }}
+              <button
+                className={`interactive-element ${thinkingEnabled ? 'animate-pulse' : ''}`}
                 onClick={() => setThinkingEnabled(!thinkingEnabled)}
-                onMouseEnter={(e) => {
-                  if (!thinkingEnabled)
-                    e.currentTarget.style.backgroundColor = "var(--hover-bg)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!thinkingEnabled)
-                    e.currentTarget.style.backgroundColor = "transparent";
-                }}
-                title={
-                  thinkingEnabled ? "Thinking Mode On" : "Thinking Mode Off"
-                }
+                title={thinkingEnabled ? "Disable Deep Thinking" : "Enable Deep Thinking"}
+                style={{ padding: "6px", borderRadius: "var(--radius-sm)", color: thinkingEnabled ? "var(--purple-color, #a855f7)" : "var(--secondary-text)"}}
               >
-                <div style={{ position: "relative" }}>
-                  <Brain size={16} />
-                  {thinkingEnabled && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: -2,
-                        right: -2,
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        backgroundColor: "var(--accent-color)",
-                        border: "1px solid var(--input-bg)",
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Quick Model Switcher (CPU Icon) */}
-            {isConversationStarted && onQuickModelSelect && (
-              <div
-                style={{
-                  cursor: "pointer",
-                  padding: "var(--spacing-xs)",
-                  borderRadius: "var(--border-radius)",
-                  transition: "background-color 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: selectedQuickModel
-                    ? "var(--accent-color)"
-                    : "var(--secondary-text)",
-                  backgroundColor: selectedQuickModel
-                    ? "var(--accent-bg-transparent)"
-                    : "transparent",
-                }}
-                onClick={() => setIsQuickModelDropdownOpen(true)}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = selectedQuickModel
-                    ? "var(--accent-bg-transparent-hover)"
-                    : "var(--hover-bg)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = selectedQuickModel
-                    ? "var(--accent-bg-transparent)"
-                    : "transparent")
-                }
-                title="Quick Switch Model"
-              >
-                <Zap size={16} />
-              </div>
+                <Brain size={16} />
+              </button>
             )}
           </div>
 
-          {/* Right Icons */}
-          <div style={{ display: "flex", gap: "var(--spacing-xs)" }}>
-            {/* Send / Stop Button */}
-            <div
-              style={{
-                cursor:
-                  isHistoryMode || isLoadingCache
-                    ? "not-allowed"
-                    : isStreaming
-                      ? "pointer"
-                      : message.trim() || uploadedFiles.length > 0
-                        ? "pointer"
-                        : "default",
-                padding: "var(--spacing-xs)",
-                borderRadius: "var(--border-radius)",
-                transition: "background-color 0.2s",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color:
-                  isHistoryMode || isLoadingCache
-                    ? "var(--secondary-text)"
-                    : isStreaming
-                      ? "#f44336" // Red color for stop
-                      : message.trim() || uploadedFiles.length > 0
-                        ? "var(--accent-text)"
-                        : "var(--secondary-text)",
-                pointerEvents:
-                  isHistoryMode || isLoadingCache ? "none" : "auto",
-              }}
+          {/* Right Action Items */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              className="interactive-element"
               onClick={() => {
                 if (isStreaming && onStopGeneration) {
-                  // Stop generation
                   onStopGeneration();
                   return;
                 }
-
                 if (!currentModel && !selectedQuickModel && !hasResolvedModel) {
-                  // Alert user or show dropdown
                   setIsQuickModelDropdownOpen(true);
                   if (providers.length === 0) fetchProviders();
                   return;
                 }
                 handleSend(currentModel, currentAccount, thinkingEnabled);
               }}
-              onMouseEnter={(e) => {
-                if (isStreaming || message.trim() || uploadedFiles.length > 0) {
-                  e.currentTarget.style.backgroundColor = "var(--hover-bg)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }}
-              title={isStreaming ? "Stop Generation" : "Send Message"}
-            >
-              {isStreaming ? <X size={16} strokeWidth={2.5} /> : <SendIcon />}
-            </div>
-          </div>
-        </div>
-
-        {/* Language Badge */}
-        {isConnected &&
-          !isElaraMismatch &&
-          LANGUAGES.some((l) => l.code === preferredLanguage) && (
-            <div
+              disabled={isHistoryMode || isLoadingCache || (!isStreaming && !message.trim() && uploadedFiles.length === 0)}
               style={{
-                position: "absolute",
-                top: "8px",
-                right: "8px",
-                backgroundColor: "var(--vscode-badge-background)",
-                color: "var(--vscode-badge-foreground)",
-                padding: "2px 6px",
-                borderRadius: "4px",
-                fontSize: "10px",
-                fontWeight: 600,
+                width: "36px",
+                height: "36px",
+                borderRadius: "var(--radius-md)",
+                backgroundColor: isStreaming ? "var(--error-color)" : (message.trim() || uploadedFiles.length > 0 ? "var(--accent-color)" : "var(--tertiary-bg)"),
+                color: (isStreaming || message.trim() || uploadedFiles.length > 0) ? "white" : "var(--secondary-text)",
                 display: "flex",
                 alignItems: "center",
-                gap: "4px",
-                zIndex: 5,
-                opacity: 0.8,
-                pointerEvents: "none",
+                justifyContent: "center",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                border: "none",
+                cursor: (isStreaming || message.trim() || uploadedFiles.length > 0) ? "pointer" : "default",
+                boxShadow: (message.trim() || uploadedFiles.length > 0) ? "var(--accent-glow)" : "none",
               }}
             >
-              <span>
-                {LANGUAGES.find((l: any) => l.code === preferredLanguage)
-                  ?.flag || "🇺🇸"}{" "}
-                {preferredLanguage.toUpperCase()}
-              </span>
-            </div>
-          )}
-
-        {/* Health / Elara Badges (Stuck to Border) */}
-        {!isConnected && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "100%",
-              right: "8px",
-              backgroundColor: "rgba(244, 67, 54, 0.1)",
-              color: "#f44336",
-              padding: "4px 12px",
-              fontSize: "11px",
-              fontWeight: 600,
-              borderTopLeftRadius: "var(--border-radius)",
-              borderTopRightRadius: "var(--border-radius)",
-              borderBottomLeftRadius: "0",
-              borderBottomRightRadius: "0",
-              border: "1px solid rgba(244, 67, 54, 0.2)",
-              borderBottom: "none",
-              cursor: "pointer",
-              zIndex: 20,
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
-              marginBottom: "-1px",
-            }}
-            onClick={() => {
-              // Open Settings Panel
-              window.postMessage({ command: "showSettings" }, "*");
-            }}
-          >
-            Connection Error
+              {isStreaming ? <X size={20} strokeWidth={3} /> : <SendIcon />}
+            </button>
           </div>
-        )}
-        {isConnected && isElaraMismatch && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "100%",
-              right: "8px",
-              backgroundColor: "rgba(255, 152, 0, 0.1)",
-              color: "#ff9800",
-              padding: "4px 12px",
-              fontSize: "11px",
-              fontWeight: 600,
-              borderTopLeftRadius: "var(--border-radius)",
-              borderTopRightRadius: "var(--border-radius)",
-              borderBottomLeftRadius: "0",
-              borderBottomRightRadius: "0",
-              border: "1px solid rgba(255, 152, 0, 0.2)",
-              borderBottom: "none",
-              cursor: "pointer",
-              zIndex: 20,
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
-              marginBottom: "-1px",
-            }}
-            onClick={() => {
-              const vscodeApi = (window as any).vscodeApi;
-              if (vscodeApi) {
-                vscodeApi.postMessage({
-                  command: "openExternal",
-                  url: "https://github.com/KhanhRomVN/Elara",
-                });
-              }
-            }}
-          >
-            Elara Version Mismatch
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* Language Badge */}
+      {isConnected && !isElaraMismatch && LANGUAGES.some((l) => l.code === preferredLanguage) && (
+        <div
+          style={{
+            position: "absolute",
+            top: "14px",
+            right: "24px",
+            backgroundColor: "var(--tertiary-bg)",
+            color: "var(--secondary-text)",
+            padding: "2px 8px",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "10px",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            opacity: 0.8,
+            border: "1px solid var(--border-color)",
+          }}
+        >
+          <span>{LANGUAGES.find((l: any) => l.code === preferredLanguage)?.flag || "🇺🇸"}</span>
+          <span style={{ letterSpacing: "0.5px" }}>{preferredLanguage.toUpperCase()}</span>
+        </div>
+      )}
+
+      {/* Error/Mismatch Badges */}
+      {!isConnected && (
+        <div
+          className="animate-pulse"
+          onClick={() => window.postMessage({ command: "showSettings" }, "*")}
+          style={{
+            position: "absolute",
+            bottom: "100%",
+            right: "24px",
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            color: "var(--error-color)",
+            padding: "6px 14px",
+            fontSize: "11px",
+            fontWeight: 700,
+            borderTopLeftRadius: "var(--radius-md)",
+            borderTopRightRadius: "var(--radius-md)",
+            border: "1.5px solid var(--error-color)",
+            borderBottom: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            marginBottom: "-1px",
+          }}
+        >
+          <X size={12} strokeWidth={3} />
+          Connection Down
+        </div>
+      )}
+      {isConnected && isElaraMismatch && (
+        <div
+          onClick={() => {
+            const vscodeApi = (window as any).vscodeApi;
+            if (vscodeApi) vscodeApi.postMessage({ command: "openExternal", url: "https://github.com/KhanhRomVN/Elara" });
+          }}
+          style={{
+            position: "absolute",
+            bottom: "100%",
+            right: "24px",
+            backgroundColor: "rgba(245, 158, 11, 0.1)",
+            color: "var(--yellow-color, #eab308)",
+            padding: "6px 14px",
+            fontSize: "11px",
+            fontWeight: 700,
+            borderTopLeftRadius: "var(--radius-md)",
+            borderTopRightRadius: "var(--radius-md)",
+            border: "1.5px solid var(--yellow-color, #eab308)",
+            borderBottom: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            marginBottom: "-1px",
+          }}
+        >
+          <Zap size={12} fill="currentColor" />
+          Elara Mismatch
+        </div>
+      )}
+
       <div ref={quickModelDropdownRef}>
         <QuickSwitchDrawer
           isOpen={isQuickModelDropdownOpen}

@@ -414,18 +414,25 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
           .history-card-container {
             width: 100%;
             text-align: left;
-            border-radius: 10px;
+            border-radius: var(--radius-md);
             border: 1px solid var(--border-color);
-            background-color: var(--input-bg);
+            background-color: var(--tertiary-bg);
             cursor: pointer;
             position: relative;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            box-shadow: var(--shadow-sm);
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            transition: all var(--transition-fast);
           }
           .history-card-container:hover {
             background-color: var(--hover-bg);
+            border-color: color-mix(in srgb, var(--accent-color) 30%, var(--border-color));
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+          }
+          .history-card-container:active {
+            transform: scale(0.995);
           }
           @keyframes menuAppear {
             from { opacity: 0; transform: scale(0.95) translateY(-5px); }

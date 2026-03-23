@@ -1,35 +1,92 @@
-import React, { useState } from 'react';
-import { ReactFlowProvider } from '@xyflow/react';
-import Sidebar from './components/Sidebar';
-import WorkflowCanvas from './components/WorkflowCanvas';
-import Topbar from './components/Topbar';
-import Settings from './components/Settings';
-import { PreferencesProvider, usePreferences } from './contexts/PreferencesContext';
-import { WorkflowProvider } from './contexts/WorkflowContext';
-import AiAssistant from './features/AiAssistant/App';
-import AccountManager from './features/AiAssistant/components/SettingsPanel/AccountManager';
-import { SettingsProvider } from './features/AiAssistant/context/SettingsContext';
+import React, { useState, useCallback, useEffect, useRef } from 'react'
+import { ReactFlowProvider } from '@xyflow/react'
+import Sidebar from './components/Sidebar'
+import WorkflowCanvas from './components/WorkflowCanvas'
+import Topbar from './components/Topbar'
+import Settings from './components/Settings'
+import { PreferencesProvider, usePreferences } from './contexts/PreferencesContext'
+import { WorkflowProvider } from './contexts/WorkflowContext'
+import AiAssistant from './features/AiAssistant/App'
+import AccountManager from './features/AiAssistant/components/SettingsPanel/AccountManager'
+import { SettingsProvider } from './features/AiAssistant/context/SettingsContext'
 
 function MainApp(): React.JSX.Element {
-  const [activePage, setActivePage] = useState<'home' | 'settings' | 'login'>('home');
-  const [showAi, setShowAi] = useState(false);
-  const { theme, t } = usePreferences();
+  const [activePage, setActivePage] = useState<'home' | 'settings' | 'login'>('home')
+  const [showAi, setShowAi] = useState(false)
+  const { theme, t } = usePreferences()
+  
+  // Resizing state
+  const [aiPanelWidth, setAiPanelWidth] = useState(() => {
+    const saved = localStorage.getItem('ai-panel-width')
+    return saved ? parseInt(saved, 10) : 320
+  })
+  const [isResizing, setIsResizing] = useState(false)
+  const resizingRef = useRef(false)
+
+  useEffect(() => {
+    localStorage.setItem('ai-panel-width', aiPanelWidth.toString())
+  }, [aiPanelWidth])
+
+  const startResizing = useCallback(() => {
+    setIsResizing(true)
+    resizingRef.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false)
+    resizingRef.current = false
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }, [])
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (resizingRef.current) {
+      const newWidth = window.innerWidth - e.clientX
+      if (newWidth > 200 && newWidth < window.innerWidth * 0.8) {
+        setAiPanelWidth(newWidth)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize)
+    window.addEventListener('mouseup', stopResizing)
+    return () => {
+      window.removeEventListener('mousemove', resize)
+      window.removeEventListener('mouseup', stopResizing)
+    }
+  }, [resize, stopResizing])
 
   return (
     <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans transition-colors duration-300 ${theme === 'dark' ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       <Topbar activePage={activePage} onNavigate={setActivePage} />
       
-      <div className="flex flex-1 overflow-hidden relative">
-        <div className={`flex flex-1 overflow-hidden ${activePage === 'home' ? '' : 'hidden'}`}>
+      <div className="flex flex-1 overflow-hidden relative min-h-0 min-w-0">
+        <div className={`flex flex-1 overflow-hidden min-h-0 min-w-0 ${activePage === 'home' ? '' : 'hidden'}`}>
           <Sidebar onToggleAi={() => setShowAi(!showAi)} isAiOpen={showAi} />
-          <div className="flex-1 relative overflow-hidden flex">
+          <div className="flex-1 relative overflow-hidden flex min-h-0 min-w-0">
             <WorkflowCanvas />
             
             {/* AI Panel */}
-            <div className={`h-full border-l border-gray-200 dark:border-gray-800 transition-all duration-300 overflow-hidden flex flex-col min-h-0 ${showAi ? 'w-80' : 'w-0'}`}>
-               <div className="w-80 h-full flex flex-col">
-                  <AiAssistant />
-               </div>
+            <div 
+              className={`h-full border-l border-gray-200 dark:border-gray-800 flex flex-col min-h-0 max-h-full relative ${isResizing ? '' : 'transition-all duration-300'}`}
+              style={{ width: showAi ? `${aiPanelWidth}px` : '0px', overflow: showAi ? 'visible' : 'hidden' }}
+            >
+              {/* Resize Handle */}
+              {showAi && (
+                <div
+                  onMouseDown={startResizing}
+                  className="absolute top-0 -left-1 w-2 h-full cursor-col-resize hover:bg-blue-500/30 transition-colors z-50 group"
+                >
+                  <div className="absolute left-1/2 -translate-x-1/2 h-full w-0.5 bg-transparent group-hover:bg-blue-500/50" />
+                </div>
+              )}
+              
+              <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                <AiAssistant />
+              </div>
             </div>
           </div>
         </div>
@@ -59,7 +116,7 @@ function MainApp(): React.JSX.Element {
         )}
       </div>
     </div>
-  );
+  )
 }
 
 export default function App(): React.JSX.Element {
@@ -73,5 +130,5 @@ export default function App(): React.JSX.Element {
         </ReactFlowProvider>
       </SettingsProvider>
     </PreferencesProvider>
-  );
+  )
 }

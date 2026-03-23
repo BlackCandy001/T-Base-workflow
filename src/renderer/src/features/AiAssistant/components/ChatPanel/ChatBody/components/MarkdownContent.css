@@ -1,114 +1,175 @@
 .markdown-content-inline {
   line-height: 1.6;
+  font-size: 14px;
+  color: var(--primary-text);
 }
 
 .markdown-content-inline h1,
 .markdown-content-inline h2,
 .markdown-content-inline h3 {
-  margin-top: 12px;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: var(--vscode-foreground);
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  color: var(--primary-text);
+  letter-spacing: -0.01em;
 }
 
-.markdown-content-inline h1 {
-  font-size: 1.25em;
-}
-.markdown-content-inline h2 {
-  font-size: 1.1em;
-}
-.markdown-content-inline h3 {
-  font-size: 1.05em;
-}
+.markdown-content-inline h1 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+.markdown-content-inline h2 { font-size: 1.25em; }
+.markdown-content-inline h3 { font-size: 1.1em; }
 
 .markdown-content-inline p {
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .markdown-content-inline ul,
 .markdown-content-inline ol {
-  margin-bottom: 8px;
-  padding-left: 20px;
+  margin-bottom: 16px;
+  padding-left: 24px;
 }
 
 .markdown-content-inline li {
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+.markdown-content-inline li::marker {
+  color: var(--accent-color);
+  font-weight: 700;
 }
 
 .markdown-content-inline table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
-  margin: 12px 0;
+  margin: 20px 0;
   font-size: 0.9em;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .markdown-content-inline th,
 .markdown-content-inline td {
-  border: 1px solid var(--vscode-panel-border);
-  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  padding: 10px 14px;
   text-align: left;
 }
 
+.markdown-content-inline th:last-child,
+.markdown-content-inline td:last-child {
+  border-right: none;
+}
+
+.markdown-content-inline tr:last-child td {
+  border-bottom: none;
+}
+
 .markdown-content-inline th {
-  background-color: var(--vscode-editor-lineHighlightBackground);
-  font-weight: 600;
+  background-color: var(--tertiary-bg);
+  font-weight: 700;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  font-size: 0.85em;
+  letter-spacing: 0.05em;
 }
 
 .markdown-content-inline code {
-  background-color: var(--vscode-editor-lineHighlightBackground);
-  padding: 2px 4px;
+  background-color: var(--tertiary-bg);
+  padding: 2px 6px;
   border-radius: 4px;
-  font-family: var(--vscode-editor-font-family, monospace);
+  font-family: var(--font-mono);
   font-size: 0.9em;
+  border: 1px solid var(--border-color);
+  color: var(--accent-color);
+}
+
+.markdown-content-inline pre code {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
 }
 
 .markdown-content-inline a {
-  color: var(--vscode-textLink-foreground);
+  color: var(--accent-color);
   text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .markdown-content-inline a:hover {
-  text-decoration: underline;
+  border-bottom-color: var(--accent-color);
+  opacity: 0.8;
 }
 
 .markdown-content-inline blockquote {
-  border-left: 4px solid var(--vscode-panel-border);
-  padding-left: 12px;
-  color: var(--vscode-descriptionForeground);
-  margin: 12px 0;
+  border-left: 4px solid var(--accent-color);
+  padding: 12px 20px;
+  background-color: var(--accent-bg-transparent);
+  color: var(--primary-text);
+  margin: 20px 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-style: italic;
 }
 
-
+/* Assistant Message Container */
 .assistant-message-container {
   display: flex;
   flex-direction: column;
-  padding-left: 24px;
-  border-left: 1px solid var(--vscode-widget-border);
-  margin-left: 10px;
+  padding-left: 32px;
+  margin-left: 12px;
   position: relative;
+  transition: all var(--transition-normal);
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.assistant-message-container::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--border-color) 0%, transparent 100%);
 }
 
 .message-bubble {
   position: relative;
-  max-width: 90%;
-  padding: 8px 12px;
-  border-radius: 12px;
+  max-width: 95%;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .message-user {
   align-self: flex-end;
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
+  background: linear-gradient(135deg, var(--accent-color) 0%, color-mix(in srgb, var(--accent-color), black 15%) 100%);
+  color: white;
   border-bottom-right-radius: 4px;
   margin-left: auto;
+  box-shadow: var(--accent-glow);
+  margin-bottom: 24px;
+  margin-right: 8px;
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .message-ai {
   align-self: flex-start;
   background-color: transparent;
-  color: var(--vscode-editor-foreground);
+  color: var(--primary-text);
   width: 100%;
   max-width: 100%;
   padding: 0;
@@ -116,40 +177,51 @@
 
 .timeline-dot {
   position: absolute;
-  left: -29px; /* Centered on the border-left of the container */
-  top: 10px;
-  width: 10px;
-  height: 10px;
+  left: -37px;
+  top: 12px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background-color: var(--ai-accent);
-  border: 2px solid var(--vscode-editor-background);
+  background-color: var(--secondary-bg);
+  border: 2.5px solid var(--border-color);
   z-index: 2;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 0 4px var(--primary-bg);
 }
 
-/* Metadata dot refinement */
+.assistant-message-container:hover .timeline-dot {
+  border-color: var(--accent-color);
+  transform: scale(1.2);
+  box-shadow: 0 0 12px var(--accent-color);
+}
+
+.ai-dot {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
 .metadata-dot {
-  background-color: var(--vscode-editor-background) !important;
+  background-color: var(--secondary-bg);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .metadata-dot img {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
-}
-
-.metadata-dot .codicon {
-  font-size: 14px;
-  color: var(--vscode-descriptionForeground);
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .metadata-text {
   font-size: 11px;
-  color: var(--vscode-descriptionForeground);
-  font-style: italic;
-  margin-bottom: 8px;
+  color: var(--secondary-text);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+  opacity: 0.6;
 }
 
 /* Wrappers for consistent spacing */
@@ -161,81 +233,182 @@
 .question-wrapper, 
 .diagram-wrapper, 
 .followup-wrapper {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
   position: relative;
 }
 
 /* Specific component styling */
 .thinking-content {
   font-size: 13px;
-  color: var(--vscode-descriptionForeground);
-  padding: 8px 12px;
-  background-color: var(--vscode-editor-inactiveSelectionBackground);
-  border-radius: 6px;
-  margin-top: 4px;
+  color: var(--secondary-text);
+  padding: 16px 20px;
+  background-color: var(--tertiary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-top: 12px;
   white-space: pre-wrap;
+  font-family: var(--font-mono);
+  line-height: 1.6;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .revert-button {
   position: absolute;
-  right: 8px;
-  top: 8px;
+  right: -36px;
+  top: 0;
   opacity: 0;
   cursor: pointer;
-  padding: 4px;
-  color: var(--vscode-button-foreground);
-  transition: opacity 0.2s;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  padding: 8px;
+  color: var(--secondary-text);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--secondary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
 }
 
 .message-user:hover .revert-button {
   opacity: 1;
+  right: -44px;
+}
+
+.revert-button:hover {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  box-shadow: var(--accent-glow);
+  transform: rotate(-45deg);
 }
 
 .show-more-toggle {
   font-size: 11px;
-  color: var(--ai-accent);
+  color: var(--accent-color);
   cursor: pointer;
-  margin-top: 4px;
-  font-weight: 600;
+  margin-top: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.show-more-toggle:hover {
+  opacity: 0.8;
 }
 
 .raw-message {
-  font-family: var(--vscode-editor-font-family, monospace);
+  font-family: var(--font-mono);
   font-size: 12px;
   white-space: pre-wrap;
-  padding: 12px;
-  background-color: var(--vscode-editor-background);
-  border: 1px solid var(--vscode-widget-border);
-  border-radius: 8px;
-  margin-top: 8px;
+  padding: 20px;
+  background-color: var(--tertiary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-top: 16px;
+  color: var(--primary-text);
+  line-height: 1.6;
 }
 
 .task-badge {
   font-size: 10px;
-  font-weight: 700;
-  background-color: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
-  padding: 2px 6px;
-  border-radius: 10px;
+  font-weight: 800;
+  background-color: var(--accent-color);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  box-shadow: var(--accent-glow);
+}
+
+.task-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background-color: var(--secondary-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
 }
 
 .task-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   font-size: 13px;
-  padding: 2px 0;
+  padding: 4px 0;
+  color: var(--primary-text);
+  transition: all 0.2s ease;
 }
 
 .task-item.completed {
-  opacity: 0.6;
+  opacity: 0.5;
+  text-decoration: line-through;
+  color: var(--secondary-text);
 }
 
-.task-item .codicon-check {
-  color: #3fb950;
+.file-content-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background-color: var(--tertiary-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  width: fit-content;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
+
+.file-content-block:hover {
+  border-color: var(--accent-color);
+  background-color: var(--accent-bg-transparent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.file-name {
+  font-size: 13px;
+  color: var(--primary-text);
+  font-weight: 600;
+}
+
+.message-code-block {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.message-code-block:hover {
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--border-color), var(--accent-color) 30%);
+}
+
+.message-code-header-actions button {
+  background-color: transparent;
+  border: none;
+  color: var(--secondary-text);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.message-code-header-actions button:hover {
+  background-color: var(--tertiary-bg);
+  color: var(--accent-color);
+}
+
+/* Timeline dot colors by message type */
+.thinking-dot { background-color: var(--tertiary-bg); border-color: var(--border-color); }
+.tool-dot { background-color: var(--accent-color); border-color: var(--accent-color); }
+.code-dot { background-color: var(--purple-color, #a855f7); border-color: var(--purple-color, #a855f7); }
+.file-dot { background-color: var(--blue-color, #3b82f6); border-color: var(--blue-color, #3b82f6); }
+.task-dot { background-color: var(--accent-color); border-color: var(--accent-color); }
+.question-dot { background-color: var(--yellow-color, #eab308); border-color: var(--yellow-color, #eab308); }
 

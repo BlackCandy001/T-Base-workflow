@@ -144,4 +144,44 @@ Tried 2 approaches, still failing:
 Need: 1. Linux distro? 2. Output of \`java -version\`?
 </markdown>
 \`\`\`
+---
+
+---
+
+## Ex 8: Flow Generation (T-Base Workflow) ✅
+
+**User**: "Vẽ một flow duyệt bài viết: Tác giả viết -> AI kiểm tra -> Nếu đạt thì đăng, không thì trả về Author"
+
+\`\`\`xml
+<thinking>
+The user wants a content approval workflow. 
+Nodes needed: Trigger (Start), Member (Author), AiNode (Check), Decision (Pass/Fail), Task (Publish/Edit).
+</thinking>
+<diagram>
+{
+  "nodes": [
+    { "id": "start", "type": "TriggerNode", "data": { "label": "Bắt đầu", "type": "Manual" }, "position": { "x": 0, "y": 0 } },
+    { "id": "author", "type": "MemberNode", "data": { "name": "Author", "role": "Writer" }, "position": { "x": 200, "y": 0 } },
+    { "id": "ai-check", "type": "AiNode", "data": { "label": "AI Kiểm định", "provider": "OpenAI", "model": "gpt-4o" }, "position": { "x": 450, "y": 0 } },
+    { "id": "decision", "type": "DecisionNode", "data": { "label": "Đạt yêu cầu?" }, "position": { "x": 700, "y": 0 } },
+    { "id": "publish", "type": "TaskNode", "data": { "title": "Đăng bài", "progress": 0 }, "position": { "x": 950, "y": -100 } },
+    { "id": "edit", "type": "TaskNode", "data": { "title": "Chỉnh sửa lại", "progress": 0 }, "position": { "x": 950, "y": 150 } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "start", "target": "author" },
+    { "id": "e2", "source": "author", "target": "ai-check" },
+    { "id": "e3", "source": "ai-check", "target": "decision" },
+    { "id": "e4", "source": "decision", "target": "publish", "sourceHandle": "true", "label": "Đạt" },
+    { "id": "e5", "source": "decision", "target": "edit", "sourceHandle": "false", "label": "Không đạt" },
+    { "id": "e6", "source": "edit", "target": "author", "label": "Gửi lại" }
+  ]
+}
+</diagram>
+<markdown>
+Tôi đã thiết kế flow duyệt bài viết tự động với các bước sau:
+1. **Bắt đầu**: Kích hoạt thủ công.
+2. **AI Kiểm định**: Sử dụng GPT-4o để đánh giá nội dung.
+3. **Nhánh điều hướng**: Nếu đạt sẽ chuyển sang Task "Đăng bài", nếu không đạt sẽ trả về cho Author chỉnh sửa.
+</markdown>
+\`\`\`
 `;

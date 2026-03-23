@@ -21,13 +21,13 @@ export default function WorkflowTabs() {
   };
 
   return (
-    <div className="flex items-center gap-1 px-4 py-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 overflow-x-auto custom-scrollbar no-scrollbar-buttons">
+    <div className="flex items-center gap-1 px-4 py-1.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 overflow-x-auto overflow-y-hidden flex-nowrap shrink-0 h-12 min-w-0">
       {workflows.map((wf) => (
         <div
           key={wf.id}
           onClick={() => switchWorkflow(wf.id)}
           onDoubleClick={(e) => handleStartRename(wf.id, wf.name, e)}
-          className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer border ${
+          className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer border shrink-0 max-w-[160px] ${
             activeId === wf.id 
               ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400' 
               : 'bg-transparent border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -85,6 +85,25 @@ export default function WorkflowTabs() {
       >
         <Plus size={16} />
       </button>
+
+      <style>{`
+        .overflow-x-auto::-webkit-scrollbar {
+          height: 6px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        .dark .overflow-x-auto::-webkit-scrollbar-thumb {
+          background: #334155;
+        }
+        .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
     </div>
   );
 }
