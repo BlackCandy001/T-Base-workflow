@@ -1,0 +1,884 @@
+import { Request, Response } from 'express';
+import { getDb } from '../services/db';
+import {
+  getConversations,
+  getConversationDetail,
+  sendMessage,
+} from '../services/chat.service';
+import { createLogger } from '../utils/logger';
+import crypto from 'crypto';
+import { recordRequest, recordSuccess } from '../services/stats.service';
+import { ChatRequest } from '../types';
+
+import {
+  getAllProviders,
+  getProviderModels,
+} from '../services/provider.service';
+import { providerRegistry } from '../provider/registry';
+import { getAccountSelector } from '../services/account-selector';
+import { countTokens, countMessagesTokens } from '../utils/tokenizer';
+
+const logger = createLogger('ChatController');
+const unescapeHtml = (str: string): string => {
+  return str
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+};
+
+// updateModelPerformance: removed
+
+// GET /v1/accounts/:accountId/conversations
+export const getAccountConversations = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { accountId } = req.params;
+    const limit = parseInt(req.query.limit as string) || 30;
+    const page = parseInt(req.query.page as string) || 1;
+
+    // Get account from database (synchronous)
+    const db = getDb();
+    const account = db
+      .prepare('SELECT * FROM accounts WHERE id = ?')
+      .get(accountId) as any;
+
+    if (!account) {
+      res.status(404).json({
+        success: false,
+        message: 'Account not found',
+        error: { code: 'NOT_FOUND' },
+        meta: { timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    try {
+      // Fetch conversations from provider
+      const rawConversations = await getConversations({
+        credential: account.credential,
+        provider_id: account.provider_id,
+        limit,
+        page,
+      });
+
+      // Filter and normalize conversation fields
+      const conversations = rawConversations.map((conv: any) => {
+        const title = conv.title || conv.name || conv.summary || 'Untitled';
+        const id = conv.id || conv.uuid || conv.conversationId || conv._id;
+
+        // Normalize updated_at to seconds (number)
+        let updatedAt =
+          conv.updated_at || conv.updatedAt || conv.created_at || Date.now();
+
+        // If it's a date string, convert to seconds
+        if (typeof updatedAt === 'string') {
+          updatedAt = Math.floor(new Date(updatedAt).getTime() / 1000);
+        } else if (updatedAt > 1000000000000) {
+          // If it's milliseconds (longer than 10^12), convert to seconds
+          updatedAt = Math.floor(updatedAt / 1000);
+        }
+
+        return {
+          id,
+          title,
+          updated_at: updatedAt,
+        };
+      });
+
+      // --- NEW: Merge with Local Conversations ---
+      const localConversations = db
+        .prepare(
+          'SELECT * FROM local_conversations WHERE account_id = ? ORDER BY updated_at DESC',
+        )
+        .all(accountId) as any[];
+
+      localConversations.forEach((lc) => {
+        if (!conversations.some((c) => c.id === lc.id)) {
+          conversations.push({
+            id: lc.id,
+            title: lc.title,
+            updated_at: Math.floor(lc.updated_at / 1000),
+          });
+        }
+      });
+
+      // Sort by updated_at descending
+      conversations.sort((a, b) => b.updated_at - a.updated_at);
+
+      res.status(200).json({
+        success: true,
+        message: 'Conversations retrieved successfully',
+        data: {
+          conversations,
+          account: {
+            id: account.id,
+            email: account.email,
+            provider_id: account.provider_id,
+          },
+        },
+        meta: { timestamp: new Date().toISOString() },
+      });
+    } catch (providerError: any) {
+      logger.error('Error fetching conversations from provider', providerError);
+
+      // Fallback: Return ONLY local conversations if provider fails
+      const localConversations = db
+        .prepare(
+          'SELECT * FROM local_conversations WHERE account_id = ? ORDER BY updated_at DESC',
+        )
+        .all(accountId) as any[];
+
+      const conversations = localConversations.map((lc) => ({
+        id: lc.id,
+        title: lc.title,
+        updated_at: Math.floor(lc.updated_at / 1000),
+      }));
+
+      res.status(200).json({
+        success: true,
+        message: 'Conversations retrieved from local storage',
+        data: {
+          conversations,
+          account: {
+            id: account.id,
+            email: account.email,
+            provider_id: account.provider_id,
+          },
+        },
+        meta: { timestamp: new Date().toISOString(), fallback: true },
+      });
+    }
+  } catch (error) {
+    logger.error('Error in getAccountConversations', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: { code: 'INTERNAL_ERROR' },
+      meta: { timestamp: new Date().toISOString() },
+    });
+  }
+};
+
+// GET /v1/accounts/:accountId/conversations/:conversationId
+export const getAccountConversationDetail = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { accountId, conversationId } = req.params;
+
+    // Get account from database (synchronous)
+    const db = getDb();
+    const account = db
+      .prepare('SELECT * FROM accounts WHERE id = ?')
+      .get(accountId) as any;
+
+    if (!account) {
+      res.status(404).json({
+        success: false,
+        message: 'Account not found',
+        error: { code: 'NOT_FOUND' },
+        meta: { timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    try {
+      // Fetch conversation detail from provider
+      const conversation = await getConversationDetail({
+        credential: account.credential,
+        provider_id: account.provider_id,
+        conversationId: conversationId,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Conversation details retrieved successfully',
+        data: conversation,
+        meta: { timestamp: new Date().toISOString() },
+      });
+    } catch (providerError: any) {
+      logger.error(
+        'Error fetching conversation detail from provider',
+        providerError,
+      );
+
+      // Fallback: Fetch from local database
+      const localMessages = db
+        .prepare(
+          'SELECT * FROM local_messages WHERE conversation_id = ? ORDER BY timestamp ASC',
+        )
+        .all(conversationId) as any[];
+
+      if (localMessages.length > 0) {
+        res.status(200).json({
+          success: true,
+          message: 'Conversation details retrieved from local storage',
+          data: {
+            id: conversationId,
+            messages: localMessages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+          },
+          meta: { timestamp: new Date().toISOString(), fallback: true },
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: `Failed to fetch conversation: ${providerError.message}`,
+          error: { code: 'PROVIDER_ERROR' },
+          meta: { timestamp: new Date().toISOString() },
+        });
+      }
+    }
+  } catch (error) {
+    logger.error('Error in getAccountConversationDetail', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: { code: 'INTERNAL_ERROR' },
+      meta: { timestamp: new Date().toISOString() },
+    });
+  }
+};
+
+// DELETE /v1/accounts/:accountId/conversations/:conversationId
+export const deleteAccountConversation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { accountId, conversationId } = req.params;
+    const db = getDb();
+
+    // 1. Delete messages first (FK constraint)
+    db.prepare('DELETE FROM local_messages WHERE conversation_id = ?').run(
+      conversationId,
+    );
+
+    // 2. Delete conversation
+    const result = db
+      .prepare(
+        'DELETE FROM local_conversations WHERE id = ? AND account_id = ?',
+      )
+      .run(conversationId, accountId);
+
+    if (result.changes > 0) {
+      res.status(200).json({
+        success: true,
+        message: 'Conversation deleted successfully from local storage',
+        meta: { timestamp: new Date().toISOString() },
+      });
+    } else {
+      // If none deleted, maybe it's on provider side?
+      // For now we only support deleting local ones
+      res.status(404).json({
+        success: false,
+        message: 'Conversation not found in local storage',
+        error: { code: 'NOT_FOUND' },
+        meta: { timestamp: new Date().toISOString() },
+      });
+    }
+  } catch (error) {
+    logger.error('Error in deleteAccountConversation', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: { code: 'INTERNAL_ERROR' },
+      meta: { timestamp: new Date().toISOString() },
+    });
+  }
+};
+
+// POST /v1/chat/completions (Legacy/Generic endpoint)
+export const completionController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const {
+      model,
+      messages,
+      thinking,
+      search,
+      conversation_id,
+      ref_file_ids,
+      temperature,
+    } = req.body;
+
+    const authHeader = req.headers.authorization;
+    const emailQuery = req.query.email as string;
+    const providerQuery = req.query.provider as string;
+
+    const selector = getAccountSelector();
+    const accounts = selector.getActiveAccounts();
+    let account: any | undefined;
+
+    // Strategy 1: Find by Token (ID)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      account = accounts.find((a) => a.id === token);
+    }
+
+    // Strategy 2: Find by explicit Provider + Email
+    if (!account && providerQuery && emailQuery) {
+      account = accounts.find(
+        (a) =>
+          a.email.toLowerCase() === emailQuery.toLowerCase() &&
+          a.provider_id.toLowerCase() === providerQuery.toLowerCase(),
+      );
+    }
+
+    // Strategy 3: Dynamic Inference via Registry
+    if (!account) {
+      let targetProviderId = providerQuery;
+
+      // Try to infer from model if no specific provider requested
+      if (!targetProviderId && model) {
+        const provider = providerRegistry.getProviderForModel(model);
+        if (provider) {
+          targetProviderId = provider.name;
+        }
+      }
+
+      if (targetProviderId) {
+        // Find account for this provider
+        account = accounts.find(
+          (a) =>
+            a.provider_id.toLowerCase() === targetProviderId!.toLowerCase(),
+        );
+
+        // If explicit email provided, refine search
+        if (account && emailQuery) {
+          const strictAccount = accounts.find(
+            (a) =>
+              a.provider_id.toLowerCase() === targetProviderId!.toLowerCase() &&
+              a.email.toLowerCase() === emailQuery.toLowerCase(),
+          );
+          if (strictAccount) account = strictAccount;
+        }
+      }
+    }
+
+    if (!account) {
+      res
+        .status(401)
+        .json({ error: 'No valid account found for this request' });
+      return;
+    }
+
+    // Record request start
+    recordRequest(
+      account.id,
+      account.provider_id,
+      model || 'unknown',
+      conversation_id,
+    );
+
+    let activeConversationId = conversation_id;
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    let accumulatedMetadata: any = {};
+
+    await sendMessage({
+      credential: account.credential,
+      provider_id: account.provider_id,
+      model:
+        model ||
+        providerRegistry.getProvider(account.provider_id)?.defaultModel,
+      messages,
+      stream: true,
+      thinking,
+      search,
+      conversationId: conversation_id,
+      ref_file_ids,
+      temperature,
+      onContent: (content) => {
+        res.write(
+          `data: ${JSON.stringify({ choices: [{ delta: { content: unescapeHtml(content) } }] })}\n\n`,
+        );
+      },
+      onMetadata: (metadata) => {
+        accumulatedMetadata = { ...accumulatedMetadata, ...metadata };
+        res.write(
+          `data: ${JSON.stringify({ choices: [{ delta: metadata }] })}\n\n`,
+        );
+      },
+      onThinking: (content) => {
+        res.write(`data: ${JSON.stringify({ thinking: content })}\n\n`);
+      },
+      onSessionCreated: (sessionId) => {
+        activeConversationId = sessionId;
+        res.write(`event: session_created\ndata: ${sessionId}\n\n`);
+      },
+      onDone: () => {
+        // Updated: Logic tính toán token và ghi metrics đã được chuyển về Client
+        // Backend chỉ đóng vai trò forward stream và lưu session
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+      },
+      onError: (err) => {
+        if (!res.headersSent) {
+          res.write(
+            `data: ${JSON.stringify({ error: { message: err.message } })}\n\n`,
+          );
+          res.end();
+        }
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error in completionController', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+};
+
+// POST /v1/accounts/:accountId/messages
+export const sendMessageController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const accountIdFromParams = req.params.accountId;
+    const {
+      accountId: accountIdFromBody,
+      providerId,
+      modelId,
+      messages,
+      conversationId,
+      stream,
+      is_search,
+      search,
+      temperature,
+      thinking,
+      ref_file_ids,
+    } = req.body;
+
+    let accountId = accountIdFromParams || accountIdFromBody;
+    const useSearch = is_search === true || search === true;
+
+    const db = getDb();
+    let account: any | undefined;
+
+    if (accountId) {
+      account = db
+        .prepare('SELECT * FROM accounts WHERE id = ?')
+        .get(accountId) as any;
+
+      if (account && providerId) {
+        // Kiểm tra tính nhất quán giữa accountId và providerId
+        if (account.provider_id.toLowerCase() !== providerId.toLowerCase()) {
+          res.status(400).json({
+            success: false,
+            message: `Account Conflict: The provided accountId belongs to provider '${account.provider_id}', but providerId is '${providerId}'.`,
+            error: { code: 'BAD_REQUEST' },
+          });
+          return;
+        }
+      }
+    } else if (providerId) {
+      // Tự tìm account khi chỉ có providerId
+      account = getAccountSelector().selectAccount(providerId);
+    } else if (modelId) {
+      if (modelId === 'auto') {
+        // Find provider with highest priority sequence
+        const bestSequence = db
+          .prepare(
+            'SELECT provider_id FROM model_sequences ORDER BY sequence ASC LIMIT 1',
+          )
+          .get() as { provider_id: string } | undefined;
+
+        if (bestSequence) {
+          // Use provider from sequence
+          account = getAccountSelector().selectAccount(
+            bestSequence.provider_id,
+          );
+        } else {
+          // Fallback to random/default
+          account = getAccountSelector().selectAccount();
+        }
+      } else {
+        // Tự tìm account dựa trên modelId cụ thể
+        const inferredProvider = providerRegistry.getProviderForModel(modelId);
+        if (inferredProvider) {
+          account = getAccountSelector().selectAccount(inferredProvider.name);
+        }
+      }
+    }
+
+    if (!account) {
+      // Exception for QWQ: and deepseek/deepseek-r1-0528:free
+      const isQwq =
+        providerId?.toLowerCase() === 'qwq' ||
+        modelId?.toLowerCase().includes('qwq') ||
+        modelId?.toLowerCase() === 'deepseek/deepseek-r1-0528:free';
+
+      if (isQwq) {
+        account = {
+          id: 'qwq-anonymous',
+          provider_id: 'qwq',
+          email: 'anonymous@qwq32.com',
+          credential: '{}',
+        };
+        logger.info('[Chat] Using anonymous account for QWQ');
+      }
+    }
+
+    if (!account) {
+      res.status(401).json({
+        success: false,
+        message:
+          'No valid account found for this request. Please provide a valid accountId, providerId, or modelId.',
+        error: { code: 'UNAUTHORIZED' },
+      });
+      return;
+    }
+
+    // Resolve "auto" model
+    let finalModel = modelId;
+    if (modelId === 'auto') {
+      const bestModel = db
+        .prepare(
+          'SELECT model_id FROM model_sequences WHERE provider_id = ? ORDER BY sequence ASC LIMIT 1',
+        )
+        .get(account.provider_id) as { model_id: string } | undefined;
+
+      if (bestModel) {
+        finalModel = bestModel.model_id;
+        console.log(
+          `[Chat] Auto-selected model for ${account.provider_id}: ${finalModel}`,
+        );
+      } else {
+        console.warn(
+          `[Chat] "auto" model requested but no sequence found for ${account.provider_id}`,
+        );
+        // Fallback: try to get default model from provider registry or let it fail
+        const provider = providerRegistry.getProvider(account.provider_id);
+        if (provider?.defaultModel) {
+          finalModel = provider.defaultModel;
+        }
+      }
+    }
+
+    const model = finalModel;
+
+    const providers = await getAllProviders();
+    const providerConfig = providers.find(
+      (p) => p.provider_id.toLowerCase() === account.provider_id.toLowerCase(),
+    );
+    const websiteUrl = providerConfig?.website;
+
+    // Validate search capability
+    if (useSearch) {
+      if (!providerConfig?.is_search) {
+        res.status(400).json({
+          error: `Provider ${account.provider_id} does not support search`,
+        });
+        return;
+      }
+    }
+
+    const initialMeta: any = {
+      accountId: account.id,
+      providerId: account.provider_id,
+      modelId: model,
+      email: account.email,
+    };
+    if (websiteUrl) {
+      initialMeta.websiteUrl = websiteUrl;
+    }
+
+    // Set up SSE headers if streaming (default true)
+    if (stream !== false) {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      });
+      res.write(`data: ${JSON.stringify({ meta: initialMeta })}\n\n`);
+    }
+
+    let accumulatedContent = '';
+    let accumulatedMetadata: any = { ...initialMeta };
+    let activeConversationId = conversationId;
+
+    try {
+      // captureFirstResponse check removed
+
+      recordRequest(account.id, account.provider_id, model, conversationId);
+
+      await sendMessage({
+        credential: account.credential,
+        provider_id: account.provider_id,
+        accountId: account.id,
+        model,
+        messages,
+        conversationId,
+        search: useSearch,
+        temperature,
+        thinking,
+        ref_file_ids,
+        onContent: (content) => {
+          if (stream !== false) {
+            res.write(
+              `data: ${JSON.stringify({ content: unescapeHtml(content) })}\n\n`,
+            );
+          } else {
+            accumulatedContent += content;
+          }
+        },
+        onMetadata: (meta) => {
+          if (stream !== false) {
+            res.write(`data: ${JSON.stringify({ meta })}\n\n`);
+          } else {
+            accumulatedMetadata = { ...accumulatedMetadata, ...meta };
+          }
+        },
+        onThinking: (content) => {
+          if (stream !== false) {
+            res.write(`data: ${JSON.stringify({ thinking: content })}\n\n`);
+          }
+          // Note: added thinking handling for consistency if needed
+        },
+        onDone: () => {
+          // Updated: Logic tính toán token và ghi metrics đã được chuyển về Client
+          // Backend chỉ đóng vai trò forward stream và lưu session
+
+          if (stream !== false) {
+            res.write('data: [DONE]\n\n');
+            res.end();
+          } else {
+            if (!res.headersSent) {
+              res.status(200).json({
+                success: true,
+                message: {
+                  role: 'assistant',
+                  content: unescapeHtml(accumulatedContent),
+                },
+                metadata: accumulatedMetadata,
+              });
+            }
+          }
+        },
+        onSessionCreated: (sessionId) => {
+          activeConversationId = sessionId;
+
+          if (stream !== false) {
+            res.write(`event: session_created\ndata: ${sessionId}\n\n`);
+          } else {
+            accumulatedMetadata.conversation_id = sessionId;
+          }
+        },
+        onError: (error) => {
+          logger.error('Stream error', error);
+          if (stream !== false) {
+            res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+            res.end();
+          } else {
+            if (!res.headersSent) {
+              res.status(500).json({ error: error.message });
+            }
+          }
+        },
+      });
+    } catch (error: any) {
+      logger.error('Error in sendMessage service call', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message });
+      }
+    }
+  } catch (error) {
+    logger.error('Error in sendMessageController', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+};
+
+// POST /v1/chat/messages (Anthropic Mock API)
+export const claudeMessagesController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { model, messages, stream, max_tokens, temperature } = req.body;
+
+    // Resolve Provider and Model
+    let targetProviderId: string | undefined;
+    let targetModelId: string | undefined = model;
+
+    if (model && model.includes('/')) {
+      const parts = model.split('/');
+      targetProviderId = parts[0];
+      targetModelId = parts.slice(1).join('/');
+    } else if (model) {
+      const inferredProvider = providerRegistry.getProviderForModel(model);
+      if (inferredProvider) {
+        targetProviderId = inferredProvider.name;
+      }
+    }
+
+    const selector = getAccountSelector();
+    const accounts = selector.getActiveAccounts();
+    let account: any | undefined;
+
+    if (targetProviderId) {
+      account = accounts.find(
+        (a) => a.provider_id.toLowerCase() === targetProviderId!.toLowerCase(),
+      );
+    }
+
+    // Fallback if no specific provider/account found
+    if (!account && accounts.length > 0) {
+      account = accounts[0];
+    }
+
+    if (!account) {
+      res.status(401).json({
+        error: {
+          type: 'not_found_error',
+          message: 'No active account found in Elara for this request.',
+        },
+      });
+      return;
+    }
+
+    const finalModel = targetModelId || model || 'gemini-3-flash';
+
+    // Convert Anthropic messages to Elara format
+    const elaraMessages = messages.map((m: any) => ({
+      role: m.role,
+      content: Array.isArray(m.content)
+        ? m.content
+            .map((c: any) => (c.type === 'text' ? c.text : ''))
+            .join('\n')
+        : m.content,
+    }));
+
+    // Token calculation
+    const inputTokens = countMessagesTokens(elaraMessages);
+    let outputTokens = 0;
+    let accumulatedContent = '';
+
+    if (stream) {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      });
+
+      // Anthropic format: message_start
+      const messageId = `msg_${crypto.randomUUID()}`;
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'message_start',
+          message: {
+            id: messageId,
+            type: 'message',
+            role: 'assistant',
+            content: [],
+            model: finalModel,
+            stop_reason: null,
+            stop_sequence: null,
+            usage: { input_tokens: inputTokens, output_tokens: 0 },
+          },
+        })}\n\n`,
+      );
+
+      recordRequest(account.id, account.provider_id, finalModel, undefined);
+      await sendMessage({
+        credential: account.credential,
+        provider_id: account.provider_id,
+        accountId: account.id,
+        model: finalModel,
+        messages: elaraMessages,
+        temperature,
+        stream: true,
+        onContent: (content) => {
+          accumulatedContent += content;
+          outputTokens += countTokens(content);
+          res.write(
+            `data: ${JSON.stringify({
+              type: 'content_block_delta',
+              index: 0,
+              delta: { type: 'text_delta', text: unescapeHtml(content) },
+            })}\n\n`,
+          );
+        },
+        onDone: () => {
+          res.write(
+            `data: ${JSON.stringify({
+              type: 'message_delta',
+              delta: { stop_reason: 'end_turn', stop_sequence: null },
+              usage: { output_tokens: outputTokens },
+            })}\n\n`,
+          );
+          res.write(`data: ${JSON.stringify({ type: 'message_stop' })}\n\n`);
+          res.end();
+        },
+        onError: (err) => {
+          res.write(
+            `data: ${JSON.stringify({
+              type: 'error',
+              error: { type: 'api_error', message: err.message },
+            })}\n\n`,
+          );
+          res.end();
+        },
+      });
+    } else {
+      recordRequest(account.id, account.provider_id, finalModel, undefined);
+      await sendMessage({
+        credential: account.credential,
+        provider_id: account.provider_id,
+        accountId: account.id,
+        model: finalModel,
+        messages: elaraMessages,
+        temperature,
+        stream: false,
+        onContent: (content) => {
+          accumulatedContent += content;
+        },
+        onDone: () => {
+          outputTokens = countTokens(accumulatedContent);
+          res.status(200).json({
+            id: `msg_${crypto.randomUUID()}`,
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'text', text: unescapeHtml(accumulatedContent) }],
+            model: finalModel,
+            stop_reason: 'end_turn',
+            stop_sequence: null,
+            usage: {
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+            },
+          });
+        },
+        onError: (err) => {
+          res
+            .status(500)
+            .json({ error: { type: 'api_error', message: err.message } });
+        },
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error in claudeMessagesController', error);
+    if (!res.headersSent) {
+      res
+        .status(500)
+        .json({ error: { type: 'api_error', message: error.message } });
+    }
+  }
+};

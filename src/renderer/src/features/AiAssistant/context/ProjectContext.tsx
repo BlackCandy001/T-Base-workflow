@@ -1,0 +1,119 @@
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { extensionService } from "../services/ExtensionService";
+import { useWorkflow } from "../../../contexts/WorkflowContext";
+
+interface ProjectContextType {
+  workspace: string;
+  rules: string;
+  treeView: string;
+  rootPath: string;
+  homedir: string;
+  workflowData: { nodes: any[], edges: any[] };
+  setNodes: (nodes: any) => void;
+  setEdges: (edges: any) => void;
+  isLoading: boolean;
+  error: string | null;
+  refreshContext: () => void;
+  startWatching: () => void;
+  stopWatching: () => void;
+}
+
+const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [workspace, setWorkspace] = useState("");
+  const [rules, setRules] = useState("");
+  const [treeView, setTreeView] = useState("");
+  const [rootPath, setRootPath] = useState("");
+  const [homedir, setHomedir] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshContext = useCallback(() => {
+    setIsLoading(true);
+    const requestId = `manual-refresh-${Date.now()}`;
+    extensionService.postMessage({
+      command: "getProjectContext",
+      requestId,
+    });
+  }, []);
+
+  const startWatching = useCallback(() => {
+    extensionService.postMessage({
+      command: "startProjectContextWatch",
+    });
+  }, []);
+
+  const stopWatching = useCallback(() => {
+    extensionService.postMessage({
+      command: "stopProjectContextWatch",
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data;
+      if (message.command === "projectContextResult") {
+        if (message.data) {
+          setWorkspace(message.data.workspace || "");
+          setTreeView(message.data.treeView || "");
+          setRootPath(message.data.rootPath || "");
+          setHomedir(message.data.homedir || "");
+        }
+        setRules(message.data.rules || "");
+        setTreeView(message.data.treeView || "");
+        setError(null);
+        setIsLoading(false);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    // Initial fetch
+    refreshContext();
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [refreshContext]);
+
+  const { nodes, edges, setNodes, setEdges } = useWorkflow();
+
+  return (
+    <ProjectContext.Provider
+      value={{
+        workspace,
+        rules,
+        treeView,
+        rootPath,
+        homedir,
+        workflowData: { nodes, edges },
+        setNodes,
+        setEdges,
+        isLoading,
+        error,
+        refreshContext,
+        startWatching,
+        stopWatching,
+      }}
+    >
+      {children}
+    </ProjectContext.Provider>
+  );
+};
+
+export const useProject = () => {
+  const context = useContext(ProjectContext);
+  if (context === undefined) {
+    throw new Error("useProject must be used within a ProjectProvider");
+  }
+  return context;
+};
