@@ -326,8 +326,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
   return (
     <div
       style={{
-        padding: "var(--spacing-md) var(--spacing-lg)",
-        paddingBottom: "var(--spacing-lg)",
+        padding: "8px 16px",
+        paddingBottom: "12px",
         backgroundColor: "var(--primary-bg)",
         position: "relative",
         borderTop: "1px solid var(--border-color)",
@@ -358,7 +358,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           border: !isConnected ? "1.5px solid var(--error-color)" : "1px solid var(--border-color)",
           boxShadow: "var(--shadow-md)",
           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          marginTop: "24px",
+          marginTop: "16px",
           padding: "2px",
           overflow: "hidden",
         }}
@@ -463,7 +463,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
 
         {/* Input Area */}
-        <div style={{ position: "relative", padding: "12px 16px 8px 16px", backgroundColor: "transparent" }}>
+        <div style={{ position: "relative", padding: "8px 12px 6px 12px", backgroundColor: "transparent" }}>
           <textarea
             ref={textareaRef}
             value={message}
@@ -507,8 +507,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
             rows={1}
             style={{
               width: "100%",
-              minHeight: "28px",
-              maxHeight: "240px",
+              minHeight: "24px",
+              maxHeight: "120px",
               border: "none",
               outline: "none",
               resize: "none",
@@ -587,6 +587,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
               style={{ padding: "6px", borderRadius: "var(--radius-sm)", color: isRawMode ? "var(--accent-color)" : "var(--secondary-text)"}}
             >
               <FileText size={16} />
+            </button>
+
+            <button
+              className="interactive-element"
+              onClick={() => setIsQuickModelDropdownOpen(true)}
+              title="Select Quick Switch Model"
+              style={{ padding: "6px", borderRadius: "var(--radius-sm)", color: "var(--secondary-text)"}}
+            >
+              <Cpu size={16} />
             </button>
 
             <button

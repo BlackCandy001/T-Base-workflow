@@ -249,10 +249,10 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
           }}
         >
           <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
-            <div 
-              style={{ 
-                padding: "10px", 
-                backgroundColor: "var(--accent-bg-transparent)", 
+            <div
+              style={{
+                padding: "10px",
+                backgroundColor: "var(--accent-bg-transparent)",
                 borderRadius: "10px",
                 display: "flex",
                 alignItems: "center",
@@ -271,7 +271,7 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
               </p>
             </div>
           </div>
-          
+
           <button
             className="interactive-element"
             onClick={() => {
@@ -298,7 +298,7 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
               e.currentTarget.style.color = "var(--accent-color)";
             }}
           >
-            Connect All Accounts
+
           </button>
         </div>
       </div>
@@ -424,7 +424,7 @@ const WelcomeUI: React.FC<WelcomeUIProps> = ({ onLoadConversation }) => {
                 gap: "16px",
               }}
             >
-              <div 
+              <div
                 className="animate-float"
                 style={{
                   width: "48px",

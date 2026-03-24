@@ -64,193 +64,176 @@ const ToolSettingsDrawer: React.FC<ToolSettingsDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Backdrop */}
+    <div
+      style={{
+        position: "absolute",
+        bottom: "100%", // Pop up above the input container
+        left: 0,
+        right: 0,
+        marginBottom: "8px",
+        height: "440px",
+        maxHeight: "50vh",
+        backgroundColor: "rgba(24, 24, 27, 0.95)",
+        backdropFilter: "blur(16px)",
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        borderRadius: "12px",
+        boxShadow: "0 -8px 24px rgba(0, 0, 0, 0.5)",
+        zIndex: 1000,
+        display: "flex",
+        flexDirection: "column",
+        animation: "slideUpDrawer 0.2s ease-out",
+        color: "var(--primary-text)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Header */}
       <div
-        onClick={onClose}
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.4)",
-          zIndex: 1000,
-          backdropFilter: "blur(2px)",
-        }}
-      />
-      {/* Drawer */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: "60%",
-          backgroundColor: "var(--vscode-sideBar-background)",
-          borderTop: "1px solid var(--vscode-widget-border)",
-          zIndex: 1001,
+          padding: "10px 16px",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
           display: "flex",
-          flexDirection: "column",
-          padding: "16px",
-          boxShadow: "0 -4px 12px rgba(0,0,0,0.2)",
-          borderTopLeftRadius: "12px",
-          borderTopRightRadius: "12px",
-          overflow: "hidden",
+          justifyContent: "space-between",
+          alignItems: "center",
+          backgroundColor: "rgba(0, 0, 0, 0.2)",
         }}
       >
-        <div
+        <span
           style={{
+            fontSize: "12px",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
+        >
+          Tool Execution Permissions
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px",
+            color: "var(--secondary-text)",
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "16px",
           }}
         >
-          <span style={{ fontWeight: 600, fontSize: "14px", opacity: 0.9 }}>
-            Tool Execution Permissions
-          </span>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--vscode-foreground)",
-              cursor: "pointer",
-              opacity: 0.7,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+          <X size={16} />
+        </button>
+      </div>
 
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            display: "grid",
-            gridTemplateColumns: "1fr",
-            gap: "12px",
-            paddingBottom: "20px",
-          }}
-        >
-          {Object.keys(defaultToolPermissions).map((toolId) => {
-            const permission = toolPermissions[toolId] || "auto";
-            const toolColor = getToolColor(toolId as any);
+      <div
+        className="custom-scrollbar"
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        }}
+      >
+        {Object.keys(defaultToolPermissions).map((toolId) => {
+          const permission = toolPermissions[toolId] || "auto";
+          const toolColor = getToolColor(toolId as any);
 
-            return (
+          return (
+            <div
+              key={toolId}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                transition: "background-color 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--hover-bg)")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+            >
+              {/* Tool Icon */}
               <div
-                key={toolId}
                 style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "6px",
+                  backgroundColor: `${toolColor}1A`,
+                  color: toolColor,
                   display: "flex",
                   alignItems: "center",
-                  gap: "12px",
-                  padding: "4px 0",
+                  justifyContent: "center",
+                  flexShrink: 0,
                 }}
               >
-                {/* Tool Icon */}
-                <div
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "6px",
-                    backgroundColor: `${toolColor}1A`,
-                    color: toolColor,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {TOOL_ICONS[toolId] || <Terminal size={16} />}
-                </div>
-
-                {/* Info */}
-                <div
-                  style={{ flex: 1, display: "flex", flexDirection: "column" }}
-                >
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {toolId}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      opacity: 0.6,
-                      marginTop: "2px",
-                    }}
-                  >
-                    {TOOL_DESCRIPTIONS[toolId]}
-                  </span>
-                </div>
-
-                {/* Toggle logic */}
-                <div
-                  style={{
-                    display: "flex",
-                    backgroundColor: "var(--vscode-editor-background)",
-                    borderRadius: "6px",
-                    padding: "2px",
-                    border: "1px solid var(--vscode-widget-border)",
-                  }}
-                >
-                  <button
-                    onClick={() => setToolPermission(toolId, "auto")}
-                    style={{
-                      padding: "2px 8px",
-                      fontSize: "10px",
-                      borderRadius: "4px",
-                      border: "none",
-                      cursor: "pointer",
-                      backgroundColor:
-                        permission === "auto"
-                          ? "var(--vscode-button-background)"
-                          : "transparent",
-                      color:
-                        permission === "auto"
-                          ? "var(--vscode-button-foreground)"
-                          : "var(--vscode-foreground)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Auto
-                  </button>
-                  <button
-                    onClick={() => setToolPermission(toolId, "request")}
-                    style={{
-                      padding: "2px 8px",
-                      fontSize: "10px",
-                      borderRadius: "4px",
-                      border: "none",
-                      cursor: "pointer",
-                      backgroundColor:
-                        permission === "request"
-                          ? "var(--vscode-button-background)"
-                          : "transparent",
-                      color:
-                        permission === "request"
-                          ? "var(--vscode-button-foreground)"
-                          : "var(--vscode-foreground)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Request
-                  </button>
-                </div>
+                {TOOL_ICONS[toolId] || <Terminal size={16} />}
               </div>
-            );
-          })}
-        </div>
+
+              {/* Info */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                <span style={{ fontSize: "12px", fontWeight: 600, fontFamily: "monospace" }}>
+                  {toolId}
+                </span>
+                <span style={{ fontSize: "11px", opacity: 0.6, marginTop: "2px" }}>
+                  {TOOL_DESCRIPTIONS[toolId]}
+                </span>
+              </div>
+
+              {/* Toggle logic */}
+              <div
+                style={{
+                  display: "flex",
+                  backgroundColor: "rgba(0, 0, 0, 0.2)",
+                  borderRadius: "6px",
+                  padding: "2px",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                }}
+              >
+                <button
+                  onClick={() => setToolPermission(toolId, "auto")}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "10px",
+                    borderRadius: "4px",
+                    border: "none",
+                    cursor: "pointer",
+                    backgroundColor: permission === "auto" ? "var(--accent-color)" : "transparent",
+                    color: permission === "auto" ? "white" : "var(--secondary-text)",
+                    fontWeight: 600,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  Auto
+                </button>
+                <button
+                  onClick={() => setToolPermission(toolId, "request")}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "10px",
+                    borderRadius: "4px",
+                    border: "none",
+                    cursor: "pointer",
+                    backgroundColor: permission === "request" ? "var(--accent-color)" : "transparent",
+                    color: permission === "request" ? "white" : "var(--secondary-text)",
+                    fontWeight: 600,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  Request
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </>
+
+      <style>{`
+        @keyframes slideUpDrawer {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 };
 
